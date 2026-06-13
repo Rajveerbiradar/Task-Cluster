@@ -119,7 +119,7 @@ fun TaskContextMenu(
         val shape = RoundedCornerShape(RadiusMd)
         Column(
             modifier = modifier
-                .widthIn(min = 220.dp, max = 280.dp)
+                .widthIn(min = 160.dp, max = 200.dp)
                 .shadow(8.dp, shape)
                 .background(SurfaceRaised, shape)
                 .border(1.dp, HairlineStrong, shape)

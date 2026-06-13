@@ -44,7 +44,7 @@ import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.journeytix.taskcluster.ui.components.core.TaskIcon
 import com.journeytix.taskcluster.ui.components.core.TaskIcons
@@ -149,11 +149,10 @@ fun SectionCard(
                         },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
+                    Image(
                         painter = painterResource(iconResId),
                         contentDescription = null,
-                        modifier = Modifier.size(17.dp),
-                        tint = Ink600,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }

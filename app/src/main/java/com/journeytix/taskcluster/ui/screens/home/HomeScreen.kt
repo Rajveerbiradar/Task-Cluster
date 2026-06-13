@@ -62,6 +62,7 @@ import java.util.Locale
 import org.koin.androidx.compose.koinViewModel
 
 private val HeaderDateFormat = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.ENGLISH)
+private const val DAILY_PARENT_ID = -1L
 
 private fun weekOf(date: LocalDate): List<DateStripDay> {
     val monday = date.minusDays((date.dayOfWeek.value - 1).toLong())
@@ -100,6 +101,11 @@ fun HomeScreen(
     var showNameForm by remember { mutableStateOf<NameFormMode?>(null) }
     var nameFormParentId by remember { mutableStateOf<Long?>(null) }
     var addTaskSectionId by remember { mutableStateOf<Long?>(null) }
+    var showImportPicker by remember { mutableStateOf(false) }
+    var showCalendar by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
+    var taskMenuAnchor by remember { mutableStateOf<IntOffset?>(null) }
+    var menuTaskId by remember { mutableStateOf<Long?>(null) }
 
     Box(
         modifier = Modifier
@@ -173,7 +179,7 @@ fun HomeScreen(
                     onSelect = { key ->
                         viewModel.onIntent(HomeIntent.SelectDate(LocalDate.parse(key)))
                     },
-                    onCalendar = { /* calendar popup — not yet built */ },
+                    onCalendar = { showCalendar = true },
                 )
                 if (state.isReadOnly || state.isPlanning) {
                     TaskBanner(
@@ -208,16 +214,18 @@ fun HomeScreen(
                     modifier = Modifier.padding(top = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(Space3),
                 ) {
-                    // Daily — pinned, always expanded, never deletable.
+                    // Daily — pinned, collapsible, emoji editable, never deletable.
                     ParentSection(
                         title = "daily",
-                        expanded = true,
-                        onToggle = {},
+                        expanded = state.dailyExpanded,
+                        onToggle = { viewModel.onIntent(HomeIntent.ToggleDaily) },
                         pinned = true,
+                        emoji = state.dailyEmoji,
+                        onEmojiClick = { anchor -> emojiTarget = DAILY_PARENT_ID to anchor },
                         count = state.daily.size.toString(),
                         modifier = Modifier.testTag("daily-parent"),
                     ) {
-                        state.daily.forEach { SectionBlock(it, viewModel, now) }
+                        state.daily.forEach { SectionBlock(it, viewModel, now, onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor }) }
                     }
                     val favourites = state.parents.filter { it.parent.isFavourite }
                     favourites.forEach { ParentBlock(
@@ -226,6 +234,7 @@ fun HomeScreen(
                         onEmojiClick = { pId, anchor -> emojiTarget = pId to anchor },
                         onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
                         onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                        onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
                     ) }
                     if (favourites.isEmpty()) {
                         Text(
@@ -254,6 +263,7 @@ fun HomeScreen(
                         onEmojiClick = { pId, anchor -> emojiTarget = pId to anchor },
                         onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
                         onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                        onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
                     ) }
                     state.standalone.forEach { SectionBlock(it, viewModel, now) }
                 }
@@ -266,7 +276,7 @@ fun HomeScreen(
                 when (mode) {
                     BottomBarMode.Home -> viewModel.onIntent(HomeIntent.SetPage(HomePage.Home))
                     BottomBarMode.Tasks -> viewModel.onIntent(HomeIntent.SetPage(HomePage.Tasks))
-                    BottomBarMode.Search -> { /* search overlay — not yet built */ }
+                    BottomBarMode.Search -> { showSearch = true }
                     BottomBarMode.Add -> { showAddChooser = true }
                 }
             },
@@ -298,7 +308,7 @@ fun HomeScreen(
                         showNameForm = NameFormMode.Section
                     }),
                     ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = { /* rename — TODO */ }),
-                    ContextMenuItem(label = "Emoji", icon = null, onClick = {
+                    ContextMenuItem(label = "Emoji", icon = TaskIcons.Smile, onClick = {
                         emojiTarget = p.id to (parentMenuAnchor ?: IntOffset.Zero)
                     }),
                     ContextMenuItem(
@@ -323,9 +333,31 @@ fun HomeScreen(
                     ContextMenuItem(label = "Add task", icon = TaskIcons.Plus, onClick = {
                         addTaskSectionId = sId
                     }),
+                    ContextMenuItem(label = "Icon", icon = TaskIcons.Image, onClick = {
+                        iconTarget = sId to (sectionMenuAnchor ?: IntOffset.Zero)
+                    }),
                     ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = { /* rename — TODO */ }),
                     ContextMenuItem(label = "Delete", icon = TaskIcons.Trash, danger = true, onClick = {
                         viewModel.onIntent(HomeIntent.DeleteSection(sId))
+                    }),
+                )
+            } ?: emptyList(),
+        )
+
+        // Task context menu
+        TaskContextMenu(
+            open = taskMenuAnchor != null,
+            anchor = taskMenuAnchor ?: IntOffset.Zero,
+            onClose = { taskMenuAnchor = null; menuTaskId = null },
+            items = menuTaskId?.let { tId ->
+                listOf(
+                    ContextMenuItem(label = "Edit", icon = TaskIcons.Pencil, onClick = {
+                        addTaskSectionId = state.daily.flatMap { it.tasks }.find { it.id == tId }?.sectionId
+                            ?: state.parents.flatMap { p -> p.sections.flatMap { it.tasks } }.find { it.id == tId }?.sectionId
+                            ?: state.standalone.flatMap { it.tasks }.find { it.id == tId }?.sectionId
+                    }),
+                    ContextMenuItem(label = "Delete", icon = TaskIcons.Trash, danger = true, onClick = {
+                        viewModel.onIntent(HomeIntent.TrashTask(tId))
                     }),
                 )
             } ?: emptyList(),
@@ -342,13 +374,7 @@ fun HomeScreen(
                             nameFormParentId = null
                             showNameForm = NameFormMode.Section
                         }
-                        AddChooserOption.NewTask -> {
-                            val target = state.daily.firstOrNull()?.section
-                                ?: state.parents.firstOrNull()?.sections?.firstOrNull()?.section
-                                ?: state.standalone.firstOrNull()?.section
-                            if (target != null) addTaskSectionId = target.id
-                        }
-                        AddChooserOption.Import -> { /* import — TODO */ }
+                        AddChooserOption.Import -> { showImportPicker = true }
                     }
                 },
                 onDismiss = { showAddChooser = false },
@@ -399,7 +425,11 @@ fun HomeScreen(
         emojiTarget?.let { (parentId, _) ->
             EmojiPicker(
                 onSelect = { emoji ->
-                    viewModel.onIntent(HomeIntent.SetParentEmoji(parentId, emoji))
+                    if (parentId == DAILY_PARENT_ID) {
+                        viewModel.onIntent(HomeIntent.SetDailyEmoji(emoji))
+                    } else {
+                        viewModel.onIntent(HomeIntent.SetParentEmoji(parentId, emoji))
+                    }
                     emojiTarget = null
                 },
                 onDismiss = { emojiTarget = null },
@@ -416,6 +446,35 @@ fun HomeScreen(
                 onDismiss = { iconTarget = null },
             )
         }
+
+        // SearchOverlay
+        if (showSearch) {
+            val allTasks = remember(state) {
+                val list = mutableListOf<Pair<com.journeytix.taskcluster.data.model.Task, String>>()
+                state.daily.forEach { s -> s.tasks.forEach { t -> list.add(t to "Daily · ${s.section.title}") } }
+                state.parents.forEach { p -> p.sections.forEach { s -> s.tasks.forEach { t -> list.add(t to "${p.parent.title} · ${s.section.title}") } } }
+                state.standalone.forEach { s -> s.tasks.forEach { t -> list.add(t to s.section.title) } }
+                list
+            }
+            SearchOverlay(
+                allTasks = allTasks,
+                onDismiss = { showSearch = false },
+                onTaskClick = { showSearch = false },
+            )
+        }
+
+        // CalendarPopup
+        if (showCalendar) {
+            CalendarPopup(
+                selectedDate = state.selected,
+                today = state.today,
+                onDateSelected = { date ->
+                    viewModel.onIntent(HomeIntent.SelectDate(date))
+                    showCalendar = false
+                },
+                onDismiss = { showCalendar = false },
+            )
+        }
     }
 }
 
@@ -429,6 +488,7 @@ private fun ParentBlock(
     onEmojiClick: (Long, IntOffset) -> Unit,
     onSectionMenu: (Long, IntOffset) -> Unit,
     onIconClick: (Long, IntOffset) -> Unit,
+    onTaskMenu: (Long, IntOffset) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     ParentSection(
@@ -441,7 +501,7 @@ private fun ParentBlock(
         onMenu = { anchor -> onMenu(parent, anchor) },
         onEmojiClick = { anchor -> onEmojiClick(parent.id, anchor) },
     ) {
-        sections.forEach { SectionBlock(it, viewModel, now, onSectionMenu, onIconClick) }
+        sections.forEach { SectionBlock(it, viewModel, now, onSectionMenu, onIconClick, onTaskMenu) }
     }
 }
 
@@ -452,12 +512,13 @@ private fun SectionBlock(
     now: Long,
     onSectionMenu: ((Long, IntOffset) -> Unit)? = null,
     onIconClick: ((Long, IntOffset) -> Unit)? = null,
+    onTaskMenu: ((Long, IntOffset) -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsState()
     val section = sectionWithTasks.section
     SectionCard(
         title = section.title,
-        iconResId = SectionIcons.resId(section.iconKey),
+        iconResId = SectionIcons.resIdOrDefault(section.iconKey),
         expanded = section.id in state.expandedSections,
         onToggle = { viewModel.onIntent(HomeIntent.ToggleSection(section.id)) },
         done = sectionWithTasks.done,
@@ -491,6 +552,7 @@ private fun SectionBlock(
                     onToggle = { checked ->
                         viewModel.onIntent(HomeIntent.ToggleTask(task, checked))
                     },
+                    onMenu = if (onTaskMenu != null) { { anchor -> onTaskMenu(task.id, anchor) } } else null,
                 )
             }
         }

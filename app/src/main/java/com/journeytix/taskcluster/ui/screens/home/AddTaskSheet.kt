@@ -4,75 +4,39 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.journeytix.taskcluster.data.model.Task
 import com.journeytix.taskcluster.ui.components.core.TaskButton
 import com.journeytix.taskcluster.ui.components.core.TaskButtonVariant
+import com.journeytix.taskcluster.ui.components.core.TaskIcon
 import com.journeytix.taskcluster.ui.components.core.TaskIconButton
 import com.journeytix.taskcluster.ui.components.core.TaskIcons
+import com.journeytix.taskcluster.ui.components.forms.TaskCheckbox
 import com.journeytix.taskcluster.ui.components.forms.TaskTextField
-import com.journeytix.taskcluster.ui.components.forms.TaskTimeInput
-import com.journeytix.taskcluster.ui.components.forms.TimeInputMode
-import com.journeytix.taskcluster.ui.theme.GeneralSans
-import com.journeytix.taskcluster.ui.theme.HairlineStrong
-import com.journeytix.taskcluster.ui.theme.Ink900
-import com.journeytix.taskcluster.ui.theme.RadiusLg
-import com.journeytix.taskcluster.ui.theme.Scrim
-import com.journeytix.taskcluster.ui.theme.Space4
-import com.journeytix.taskcluster.ui.theme.Space5
-import com.journeytix.taskcluster.ui.theme.SurfaceRaised
-import androidx.compose.material3.Text
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import com.journeytix.taskcluster.ui.theme.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-data class TaskDraft(
-    val title: String = "",
-    val description: String = "",
-    val noLimit: Boolean = true,
-    val timeMode: TimeInputMode = TimeInputMode.DateTime,
-    val date: String = "",
-    val time: String = "",
-    val days: String = "",
-    val hours: String = "",
-) {
-    fun toDueTimestamp(): Long? {
-        if (noLimit) return null
-        return when (timeMode) {
-            TimeInputMode.DaysHours -> {
-                val d = days.toLongOrNull() ?: 0
-                val h = hours.toLongOrNull() ?: 0
-                if (d == 0L && h == 0L) null
-                else System.currentTimeMillis() + d * 86_400_000 + h * 3_600_000
-            }
-            TimeInputMode.DateTime -> {
-                null
-            }
-        }
-    }
-}
+private val DATE_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH)
+private val TIME_FORMAT = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskSheet(
     open: Boolean,
@@ -83,19 +47,34 @@ fun AddTaskSheet(
 ) {
     if (!open) return
 
-    var draft by remember { mutableStateOf(TaskDraft()) }
+    var title by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var noLimit by remember { mutableStateOf(true) }
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    var selectedTime by remember { mutableStateOf<LocalTime?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
     val isEdit = editTask != null
 
     LaunchedEffect(open, editTask) {
         if (open) {
-            draft = if (editTask != null) {
-                TaskDraft(
-                    title = editTask.title,
-                    description = editTask.description,
-                    noLimit = editTask.dueDate == null,
-                )
+            if (editTask != null) {
+                title = editTask.title
+                description = editTask.description
+                noLimit = editTask.dueDate == null
+                selectedDate = editTask.dueDate?.let {
+                    Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                }
+                selectedTime = editTask.dueTime?.let {
+                    Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalTime()
+                }
             } else {
-                TaskDraft()
+                title = ""
+                description = ""
+                noLimit = true
+                selectedDate = null
+                selectedTime = null
             }
         }
     }
@@ -155,33 +134,112 @@ fun AddTaskSheet(
 
                 Column(verticalArrangement = Arrangement.spacedBy(Space4)) {
                     TaskTextField(
-                        value = draft.title,
-                        onValueChange = { draft = draft.copy(title = it) },
+                        value = title,
+                        onValueChange = { title = it },
                         label = "Title",
                         placeholder = "What needs doing?",
                     )
                     TaskTextField(
-                        value = draft.description,
-                        onValueChange = { draft = draft.copy(description = it) },
+                        value = description,
+                        onValueChange = { description = it },
                         label = "Description",
                         placeholder = "Optional — truncates at two lines",
                         multiline = true,
                         rows = 2,
                     )
-                    TaskTimeInput(
-                        mode = draft.timeMode,
-                        noLimit = draft.noLimit,
-                        date = draft.date,
-                        time = draft.time,
-                        days = draft.days,
-                        hours = draft.hours,
-                        onModeChange = { draft = draft.copy(timeMode = it) },
-                        onNoLimitChange = { draft = draft.copy(noLimit = it) },
-                        onDateChange = { draft = draft.copy(date = it) },
-                        onTimeChange = { draft = draft.copy(time = it) },
-                        onDaysChange = { draft = draft.copy(days = it) },
-                        onHoursChange = { draft = draft.copy(hours = it) },
-                    )
+
+                    // Deadline section
+                    Column {
+                        Text(
+                            text = "Deadline",
+                            style = TextStyle(
+                                fontFamily = GeneralSans,
+                                fontWeight = FontWeight.W500,
+                                fontSize = 14.sp,
+                            ),
+                            color = Ink600,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TaskCheckbox(
+                                checked = noLimit,
+                                onCheckedChange = { noLimit = it },
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "No time limit",
+                                style = TextStyle(
+                                    fontFamily = GeneralSans,
+                                    fontWeight = FontWeight.W400,
+                                    fontSize = 15.sp,
+                                ),
+                                color = Ink900,
+                            )
+                        }
+
+                        if (!noLimit) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                // Date picker field
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(RadiusSm))
+                                        .background(SurfaceSunken)
+                                        .border(1.dp, Hairline, RoundedCornerShape(RadiusSm))
+                                        .clickable { showDatePicker = true }
+                                        .padding(horizontal = 12.dp),
+                                    contentAlignment = Alignment.CenterStart,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        TaskIcon(TaskIcons.Calendar, null, size = 18.dp, tint = Ink500)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = selectedDate?.format(DATE_FORMAT) ?: "Select date",
+                                            style = TextStyle(
+                                                fontFamily = GeneralSans,
+                                                fontWeight = FontWeight.W400,
+                                                fontSize = 15.sp,
+                                            ),
+                                            color = if (selectedDate != null) Ink900 else Ink400,
+                                        )
+                                    }
+                                }
+
+                                // Time picker field
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(RadiusSm))
+                                        .background(SurfaceSunken)
+                                        .border(1.dp, Hairline, RoundedCornerShape(RadiusSm))
+                                        .clickable { showTimePicker = true }
+                                        .padding(horizontal = 12.dp),
+                                    contentAlignment = Alignment.CenterStart,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        TaskIcon(TaskIcons.Clock, null, size = 18.dp, tint = Ink500)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = selectedTime?.format(TIME_FORMAT) ?: "Select time",
+                                            style = TextStyle(
+                                                fontFamily = GeneralSans,
+                                                fontWeight = FontWeight.W400,
+                                                fontSize = 15.sp,
+                                            ),
+                                            color = if (selectedTime != null) Ink900 else Ink400,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(Space5))
@@ -189,14 +247,74 @@ fun AddTaskSheet(
                 TaskButton(
                     text = if (isEdit) "Save changes" else "Add task",
                     onClick = {
-                        val title = draft.title.ifBlank { "Untitled task" }
-                        val dueTime = draft.toDueTimestamp()
-                        onSave(title, draft.description, dueTime, dueTime)
+                        val finalTitle = title.ifBlank { "Untitled task" }
+                        val dueTimestamp = if (noLimit || selectedDate == null) {
+                            null
+                        } else {
+                            val date = selectedDate!!
+                            val time = selectedTime ?: LocalTime.NOON
+                            date.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        }
+                        onSave(finalTitle, description, dueTimestamp, dueTimestamp)
                     },
                     variant = TaskButtonVariant.Primary,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
+    }
+
+    // Material3 DatePicker Dialog
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = selectedDate?.atStartOfDay(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    // Material3 TimePicker Dialog
+    if (showTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = selectedTime?.hour ?: 12,
+            initialMinute = selectedTime?.minute ?: 0,
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                    showTimePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancel")
+                }
+            },
+            text = {
+                TimePicker(state = timePickerState)
+            },
+        )
     }
 }

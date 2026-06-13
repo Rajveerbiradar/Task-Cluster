@@ -40,6 +40,8 @@ data class HomeUiState(
     val standalone: List<SectionWithTasks> = emptyList(),
     val expandedSections: Set<Long> = emptySet(),
     val expandedParents: Set<Long> = emptySet(),
+    val dailyExpanded: Boolean = true,
+    val dailyEmoji: String? = null,
 ) {
     val isToday: Boolean get() = selected == today
     val isReadOnly: Boolean get() = selected.isBefore(today) // past — viewing only
@@ -78,6 +80,10 @@ sealed interface HomeIntent {
 
     // Task actions
     data class TrashTask(val taskId: Long) : HomeIntent
+
+    // Daily
+    data object ToggleDaily : HomeIntent
+    data class SetDailyEmoji(val emoji: String?) : HomeIntent
 }
 
 private data class LocalUi(
@@ -85,10 +91,12 @@ private data class LocalUi(
     val page: HomePage = HomePage.Home,
     val expandedSections: Set<Long> = emptySet(),
     val expandedParents: Set<Long> = emptySet(),
+    val dailyExpanded: Boolean = true,
 )
 
 class HomeViewModel(
     private val repository: TaskRepository,
+    private val userPreferences: com.journeytix.taskcluster.data.preferences.UserPreferences,
     private val today: LocalDate = LocalDate.now(),
 ) : ViewModel() {
 
@@ -109,7 +117,8 @@ class HomeViewModel(
         repository.observeActiveTasks(),
         repository.observeParents(),
         localUi,
-    ) { sections, tasks, parents, local ->
+        userPreferences.settings,
+    ) { sections, tasks, parents, local, settings ->
         val tasksBySection = tasks.groupBy { it.sectionId }
         fun withTasks(section: Section) =
             SectionWithTasks(section, tasksBySection[section.id].orEmpty())
@@ -132,6 +141,8 @@ class HomeViewModel(
                 .map(::withTasks),
             expandedSections = local.expandedSections,
             expandedParents = local.expandedParents,
+            dailyExpanded = local.dailyExpanded,
+            dailyEmoji = settings.dailyEmoji,
         )
     }.stateIn(
         viewModelScope,
@@ -210,6 +221,10 @@ class HomeViewModel(
             }
             is HomeIntent.TrashTask -> viewModelScope.launch {
                 repository.trashTask(intent.taskId)
+            }
+            is HomeIntent.ToggleDaily -> localUi.update { it.copy(dailyExpanded = !it.dailyExpanded) }
+            is HomeIntent.SetDailyEmoji -> viewModelScope.launch {
+                userPreferences.setDailyEmoji(intent.emoji)
             }
         }
     }

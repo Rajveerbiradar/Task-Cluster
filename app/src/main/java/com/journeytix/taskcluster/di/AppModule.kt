@@ -31,7 +31,7 @@ val appModule = module {
     single { get<AppDatabase>().parentDao() }
     single { TaskRepository(get(), get(), get()) }
     single { UserPreferences(androidContext()) }
-    viewModel { HomeViewModel(get()) }
+    viewModel { HomeViewModel(get(), get()) }
     viewModel { SettingsViewModel(get(), get()) }
     viewModel { TrashViewModel(get(), get()) }
 }

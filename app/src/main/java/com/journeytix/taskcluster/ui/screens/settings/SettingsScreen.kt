@@ -16,6 +16,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +50,8 @@ fun SettingsScreen(
     var picking by remember { mutableStateOf<SettingKey?>(null) }
     var confirmClear by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Page(title = "Settings", onBack = onBack) {
         PageGroup(title = "Appearance") {
@@ -102,8 +109,18 @@ fun SettingsScreen(
         PageGroup(title = "Data") {
             PageRow(
                 title = "Export tasks",
-                value = ".csv · .json",
-                onClick = { /* share intent — not yet built */ },
+                value = ".json",
+                onClick = {
+                    scope.launch {
+                        val json = viewModel.exportTasks()
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/json"
+                            putExtra(Intent.EXTRA_TEXT, json)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Export tasks"))
+                    }
+                },
             )
             PageRow(
                 title = "Import tasks",

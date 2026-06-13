@@ -16,6 +16,7 @@ object PreferenceKeys {
     val REMINDERS_ENABLED = booleanPreferencesKey("reminders")
     val REMINDER_OFFSET = stringPreferencesKey("reminder_offset") // "0"|"10"|"30"|"60"|"morning"
     val TRASH_AUTO_DELETE = stringPreferencesKey("trash_ttl") // "7"|"14"|"30"|"never"
+    val DAILY_EMOJI = stringPreferencesKey("daily_emoji")
 }
 
 data class Settings(
@@ -26,6 +27,7 @@ data class Settings(
     val remindersEnabled: Boolean = false,
     val reminderOffset: String = "0",
     val trashAutoDelete: String = "30",
+    val dailyEmoji: String? = null,
 )
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
@@ -41,6 +43,7 @@ class UserPreferences(private val context: Context) {
             remindersEnabled = prefs[PreferenceKeys.REMINDERS_ENABLED] ?: false,
             reminderOffset = prefs[PreferenceKeys.REMINDER_OFFSET] ?: "0",
             trashAutoDelete = prefs[PreferenceKeys.TRASH_AUTO_DELETE] ?: "30",
+            dailyEmoji = prefs[PreferenceKeys.DAILY_EMOJI],
         )
     }
 
@@ -50,6 +53,12 @@ class UserPreferences(private val context: Context) {
     suspend fun setAutoHideCompleted(value: String) = set(PreferenceKeys.AUTO_HIDE_COMPLETED, value)
     suspend fun setReminderOffset(value: String) = set(PreferenceKeys.REMINDER_OFFSET, value)
     suspend fun setTrashAutoDelete(value: String) = set(PreferenceKeys.TRASH_AUTO_DELETE, value)
+    suspend fun setDailyEmoji(value: String?) {
+        context.dataStore.edit {
+            if (value == null) it.remove(PreferenceKeys.DAILY_EMOJI)
+            else it[PreferenceKeys.DAILY_EMOJI] = value
+        }
+    }
 
     suspend fun setRemindersEnabled(value: Boolean) {
         context.dataStore.edit { it[PreferenceKeys.REMINDERS_ENABLED] = value }

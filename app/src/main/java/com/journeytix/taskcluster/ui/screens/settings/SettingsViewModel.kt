@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.journeytix.taskcluster.data.preferences.Settings
 import com.journeytix.taskcluster.data.preferences.UserPreferences
 import com.journeytix.taskcluster.data.repository.TaskRepository
+import com.journeytix.taskcluster.data.export.TaskExporter
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -61,5 +63,12 @@ class SettingsViewModel(
                 SettingsIntent.Reset -> preferences.resetToDefaults()
             }
         }
+    }
+
+    suspend fun exportTasks(): String {
+        val parents = repository.observeParents().first()
+        val sections = repository.observeSections().first()
+        val tasks = repository.observeActiveTasks().first()
+        return TaskExporter.export(parents, sections, tasks)
     }
 }

@@ -26,7 +26,7 @@ import com.journeytix.taskcluster.ui.theme.Ink600
 import com.journeytix.taskcluster.ui.theme.Ink900
 
 enum class AddChooserOption {
-    NewParent, NewSection, NewTask, Import
+    NewParent, NewSection, Import
 }
 
 @Composable
@@ -54,11 +54,6 @@ fun AddChooser(
             label = "New section",
             icon = { TaskIcon(TaskIcons.List, null, tint = Ink600) },
             onClick = { onSelect(AddChooserOption.NewSection) },
-        )
-        ChooserRow(
-            label = "New task",
-            icon = { TaskIcon(TaskIcons.Plus, null, tint = Ink600) },
-            onClick = { onSelect(AddChooserOption.NewTask) },
         )
         ChooserRow(
             label = "Import from .txt",

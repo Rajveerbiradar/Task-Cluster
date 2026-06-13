@@ -16,4 +16,10 @@ object SectionIcons {
     val keys: List<String> get() = all.keys.toList()
 
     fun resId(key: String?): Int? = key?.let { all[it] }
+
+    fun resIdOrDefault(key: String?): Int {
+        val direct = key?.let { all[it] }
+        if (direct != null) return direct
+        return all["default"] ?: R.drawable.ic_section_default
+    }
 }

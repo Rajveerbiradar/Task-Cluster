@@ -90,10 +90,10 @@ fun EmojiPicker(
         Spacer(modifier = Modifier.height(12.dp))
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(7),
+            columns = GridCells.Fixed(8),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp),
+                .height(240.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {

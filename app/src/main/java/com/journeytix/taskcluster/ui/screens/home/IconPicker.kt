@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -44,7 +44,7 @@ fun IconPicker(
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val iconKeys = remember { SectionIcons.keys }
+    val iconKeys = remember { SectionIcons.keys.filter { it != "default" } }
 
     PopupShell(onDismiss = onDismiss) {
         Text(
@@ -80,11 +80,10 @@ fun IconPicker(
                             ) { onSelect(key) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
+                        Image(
                             painter = painterResource(resId),
                             contentDescription = key,
-                            modifier = Modifier.size(22.dp),
-                            tint = Ink600,
+                            modifier = Modifier.size(28.dp),
                         )
                     }
                 }
