@@ -1,0 +1,67 @@
+<!-- @dsCard group="Components" viewport="700x320" name="Core — Button · IconButton · Badge · Icon" subtitle="Text actions (one blue per view), icon buttons, count pills, the line-icon set" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { margin: 0; padding: 24px; background: #fff; }
+  .grid { display: grid; gap: 22px; }
+  .lbl { font: 500 11px/1 var(--font-sans); color: var(--ink-400); margin-bottom: 12px; letter-spacing: .04em; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .icons { display: flex; gap: 14px; color: var(--ink-700); flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { Button, IconButton, Badge, Icon } = window.TaskClusterDesignSystem_1763fe;
+    const iconNames = ["chevron-down","check","search","pencil","plus","more-vertical","calendar","import","upload","undo","x","info","clock"];
+    function Demo() {
+      return (
+        <div className="grid">
+          <div>
+            <div className="lbl">buttons</div>
+            <div className="row">
+              <Button variant="primary">Add task</Button>
+              <Button variant="secondary">Cancel</Button>
+              <Button variant="ghost">Skip</Button>
+              <Button variant="primary" iconLeft={<Icon name="import" size={18} color="var(--blue-on)" />}>Import</Button>
+              <Button variant="secondary" disabled>Disabled</Button>
+              <Button variant="secondary" size="sm">Small</Button>
+            </div>
+          </div>
+          <div>
+            <div className="lbl">icon buttons</div>
+            <div className="row">
+              <IconButton label="check" icon={<Icon name="check" />} />
+              <IconButton label="search" icon={<Icon name="search" />} />
+              <IconButton label="edit" icon={<Icon name="pencil" />} active />
+              <IconButton label="add" icon={<Icon name="plus" />} />
+            </div>
+          </div>
+          <div>
+            <div className="lbl">badges</div>
+            <div className="row">
+              <Badge>3 / 8</Badge>
+              <Badge tone="accent">3 imported</Badge>
+              <Badge>2 sections</Badge>
+            </div>
+          </div>
+          <div>
+            <div className="lbl">icon set</div>
+            <div className="icons">
+              {iconNames.map(n => <Icon key={n} name={n} />)}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  </script>
+</body>
+</html>

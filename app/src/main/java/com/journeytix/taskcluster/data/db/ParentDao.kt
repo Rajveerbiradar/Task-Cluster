@@ -1,0 +1,31 @@
+package com.journeytix.taskcluster.data.db
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
+import com.journeytix.taskcluster.data.model.Parent
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface ParentDao {
+
+    @Insert
+    suspend fun insert(parent: Parent): Long
+
+    @Update
+    suspend fun update(parent: Parent)
+
+    @Delete
+    suspend fun delete(parent: Parent)
+
+    @Query("SELECT * FROM Parent WHERE id = :id")
+    suspend fun getById(id: Long): Parent?
+
+    @Query("SELECT * FROM Parent ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<Parent>>
+
+    @Query("DELETE FROM Parent WHERE id = :id")
+    suspend fun deleteById(id: Long)
+}

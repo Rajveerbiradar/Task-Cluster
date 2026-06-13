@@ -1,0 +1,71 @@
+/* ============================================================
+   TaskCluster — base reset & shared primitives
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: var(--weight-regular);
+  color: var(--ink-900);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button { font-family: inherit; }
+
+/* App column — the single TaskCluster screen lives in here */
+.tc-screen {
+  position: relative;
+  width: 100%;
+  max-width: var(--screen-max);
+  min-height: 100%;
+  margin: 0 auto;
+  background: var(--canvas);
+}
+
+/* 0.5px hairline divider used between task rows */
+.tc-hairline {
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: var(--hairline);
+  transform: scaleY(0.5);
+  transform-origin: top;
+}
+
+/* Truncation primitives — we design FOR truncation */
+.tc-truncate-1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tc-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- quiet interaction states (touch-first; press over hover) ---- */
+.tc-btn[data-variant="primary"]:not(:disabled):active   { background: var(--blue-press) !important; transform: scale(0.98); }
+.tc-btn[data-variant="secondary"]:not(:disabled):active { background: var(--surface-sunken) !important; transform: scale(0.98); }
+.tc-btn[data-variant="ghost"]:not(:disabled):active     { background: var(--surface-sunken) !important; }
+@media (hover: hover) {
+  .tc-btn[data-variant="secondary"]:not(:disabled):hover { background: var(--surface-sunken) !important; }
+  .tc-btn[data-variant="ghost"]:not(:disabled):hover     { background: rgba(44,44,42,0.05) !important; }
+  .tc-btn[data-variant="primary"]:not(:disabled):hover   { background: var(--blue-press) !important; }
+}
+
+/* generic pressable (icon buttons, rows, chips) */
+.tc-pressable { -webkit-tap-highlight-color: transparent; transition: background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard); }
+.tc-pressable:active { transform: scale(0.97); }
+@media (hover: hover) { .tc-pressable:hover { background: rgba(44,44,42,0.05); } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

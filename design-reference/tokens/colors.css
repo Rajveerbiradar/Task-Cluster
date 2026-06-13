@@ -1,0 +1,60 @@
+/* ============================================================
+   TaskCluster — Color tokens
+   Warm-paper canvas, ink text. Monochrome carries ~90% of the UI.
+   Blue is the single confident accent. Red/amber are URGENCY ONLY.
+   ============================================================ */
+
+:root {
+  /* --- Paper & surfaces (warm) --- */
+  --canvas:          #F1EFE8; /* app background — warm off-white stationery */
+  --surface:         rgba(241, 239, 232, 0.55); /* section surface — canvas tint with transparency */
+  --surface-raised:  #FFFFFF; /* floating pill, overlays, sheets */
+  --surface-sunken:  #ECEAE2; /* pressed wells, date-strip track */
+  --parent-fill:     #FFFFFF; /* parent container — white */
+
+  /* --- Ink ramp (warm-tinted neutrals) --- */
+  --ink-900:         #2C2C2A; /* primary text — near-black */
+  --ink-700:         #4A4843; /* strong secondary */
+  --ink-600:         #6E6B63; /* descriptions, secondary text */
+  --ink-500:         #8C887E; /* meta, weekday labels */
+  --ink-400:         #A8A498; /* tertiary, placeholders */
+  --ink-300:         #C6C2B6; /* completed task text, disabled */
+  --ink-200:         #DAD6CB; /* subtle fills */
+
+  /* --- Hairlines (structure without boxes) --- */
+  --hairline:        rgba(44, 44, 42, 0.085); /* 0.5px task dividers */
+  --hairline-strong: rgba(44, 44, 42, 0.14);  /* section edge, inputs */
+  --guide-line:      rgba(44, 44, 42, 0.16);   /* parent-section left guide */
+
+  /* --- Primary: black — buttons, checked, active tab, today --- */
+  --primary:         #2C2C2A;
+  --primary-press:   #1A1A18;
+  --primary-tint:    #E8E5DB;
+  --primary-on:      #FFFFFF;
+
+  /* --- Blue: kept ONLY for time-pill on-track status --- */
+  --blue:            #378ADD;
+  --blue-press:      #2C72BC;
+  --blue-tint:       #EAF2FB;
+  --blue-on:         #FFFFFF;
+
+  /* --- Urgency ramp (time pills ONLY) --- */
+  --calm:            transparent;     /* >50% remaining — no pill */
+  --on-track:        var(--blue);     /* on track — blue text */
+  --amber:           #B26C12;         /* getting close — amber text */
+  --red:             #CF3030;         /* almost due — red text */
+
+  /* overdue capsule — the loudest the UI ever gets */
+  --overdue-bg:      #FCEBEB;
+  --overdue-border:  #E24B4A;
+  --overdue-text:    #791F1F;
+
+  /* --- Feedback surfaces --- */
+  --toast-bg:        #2C2C2A; /* dark ink toast (saved) */
+  --toast-text:      #FBFAF6;
+  --warn-bg:         #F6F1E4; /* date-mode banner (read-only / planning) */
+  --warn-border:     rgba(44, 44, 42, 0.12);
+
+  /* --- Scrim --- */
+  --scrim:           rgba(33, 31, 27, 0.32);
+}

@@ -1,0 +1,53 @@
+<!-- @dsCard group="Components" viewport="700x560" name="Planner — DateStrip · Section · TaskRow · TimePill · BottomBar" subtitle="The section tree in miniature: today's date, a section with tasks, the urgency ramp, the floating bar" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  body { margin: 0; padding: 0; background: var(--canvas); }
+  .wrap { max-width: 408px; margin: 0 auto; padding: 18px 16px 0; }
+  .lbl { font: 500 11px/1 var(--font-sans); color: var(--ink-400); margin: 18px 2px 8px; letter-spacing: .04em; }
+  .barwrap { display:flex; justify-content:center; padding: 22px 0 26px; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { DateStrip, SectionCard, TaskRow, BottomBar } = window.TaskClusterDesignSystem_1763fe;
+    function Demo() {
+      const [sel, setSel] = React.useState("11");
+      const [mode, setMode] = React.useState("check");
+      const [t1, setT1] = React.useState(true);
+      const [t2, setT2] = React.useState(false);
+      const [t3, setT3] = React.useState(false);
+      const days = [
+        {key:"9",weekday:"Mon",date:9},{key:"10",weekday:"Tue",date:10},
+        {key:"11",weekday:"Wed",date:11},{key:"12",weekday:"Thu",date:12},
+        {key:"13",weekday:"Fri",date:13},{key:"14",weekday:"Sat",date:14},
+        {key:"15",weekday:"Sun",date:15},
+      ];
+      return (
+        <div className="wrap">
+          <div className="lbl">date strip</div>
+          <DateStrip days={days} selectedKey={sel} todayKey="11" onSelect={setSel} />
+          <div className="lbl">section + tasks</div>
+          <SectionCard title="Launch prep" done={1} total={3} status="due" time="9m">
+            <TaskRow title="Write release notes" checked={t1} onToggle={setT1} description="Summarise the 2.2 changes for the changelog." />
+            <TaskRow title="Final QA pass on import flow" status="on-track" time="2h 40m" checked={t2} onToggle={setT2} />
+            <TaskRow title="Email the beta list" status="overdue" time="−2h 14m" checked={t3} onToggle={setT3} description="Include the opt-out link and the new screenshots." />
+          </SectionCard>
+          <div className="barwrap">
+            <BottomBar mode={mode} onModeChange={setMode} />
+          </div>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  </script>
+</body>
+</html>

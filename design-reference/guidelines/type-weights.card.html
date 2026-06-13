@@ -1,0 +1,25 @@
+<!-- @dsCard group="Type" viewport="700x150" name="Two weights" subtitle="Regular 400 for reading, Medium 500 for structure — nothing else" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 24px 26px; background: #fff; display:flex; gap: 40px; align-items:flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .col span { display:block; }
+  .w { font-size: 26px; line-height: 1.18; color: var(--ink-900); letter-spacing: -0.01em; }
+  .lbl { font: 400 12px/1.4 var(--font-sans); color: var(--ink-500); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="col">
+    <span class="w" style="font-weight:400">Regular four hundred</span>
+    <span class="lbl">400 — task titles, descriptions, body</span>
+  </div>
+  <div class="col">
+    <span class="w" style="font-weight:500">Medium five hundred</span>
+    <span class="lbl">500 — section titles, header, meta, actions</span>
+  </div>
+</body>
+</html>

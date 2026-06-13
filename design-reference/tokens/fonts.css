@@ -1,0 +1,29 @@
+/* ============================================================
+   TaskCluster — Webfonts
+   General Sans (Indian Type Foundry) — free on Fontshare.
+   This is the exact typeface used in the source Figma file.
+
+   Declared as explicit @font-face rules (rather than a remote @import)
+   so the design-system compiler can read the family directly. The binaries
+   are served from the Fontshare CDN; only the two weights we use (400/500).
+   To make this fully offline, drop GeneralSans-Regular/Medium .woff2 into
+   this folder and swap the src url() targets for local paths.
+   ============================================================ */
+
+@font-face {
+  font-family: "General Sans";
+  src: url("https://cdn.fontshare.com/wf/MFQT7HFGCR2L5ULQTW6YXYZXXHMPKLJ3/YWQ244D6TACUX5JBKATPOW5I5MGJ3G73/7YY3ZAAE3TRV2LANYOLXNHTPHLXVWTKH.woff2") format("woff2"),
+       url("https://cdn.fontshare.com/wf/MFQT7HFGCR2L5ULQTW6YXYZXXHMPKLJ3/YWQ244D6TACUX5JBKATPOW5I5MGJ3G73/7YY3ZAAE3TRV2LANYOLXNHTPHLXVWTKH.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("https://cdn.fontshare.com/wf/3RZHWSNONLLWJK3RLPEKUZOMM56GO4LJ/BPDRY7AHVI3MCDXXVXTQQ76H3UXA63S3/SB2OEB6IKZPRR6JT4GFJ2TFT6HBB6AZN.woff2") format("woff2"),
+       url("https://cdn.fontshare.com/wf/3RZHWSNONLLWJK3RLPEKUZOMM56GO4LJ/BPDRY7AHVI3MCDXXVXTQQ76H3UXA63S3/SB2OEB6IKZPRR6JT4GFJ2TFT6HBB6AZN.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}

@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(graphify *)",
+      "PowerShell(cargo *)",
+      "PowerShell(ls \"$env:USERPROFILE\\\\.claude\\\\rules\\\\ecc\\\\\" 2>&1; echo \"---\"; ls \"$env:USERPROFILE\\\\.claude\\\\skills\\\\\" 2>&1; echo \"---\"; ls \"$env:USERPROFILE\\\\.claude\\\\agents\\\\\" 2>&1)",
+      "PowerShell(ls \"$env:USERPROFILE\\\\.claude\\\\skills\\\\ecc\\\\\" 2>&1)",
+      "PowerShell(winget install *)",
+      "PowerShell(cargo install *)",
+      "PowerShell(gcc *)",
+      "PowerShell(winget search *)",
+      "PowerShell(& \"C:\\\\Users\\\\rajveer\\\\AppData\\\\Roaming\\\\npm\\\\node_modules\\\\@anthropic-ai\\\\claude-code\\\\bin\\\\claude.exe\" --version 2>&1)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-ChildItem -Force | Select-Object Name, Mode; Write-Output '---'; if \\(Test-Path app\\) { Get-ChildItem app -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) } })",
+      "PowerShell(Get-ChildItem design-reference -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\\(Get-Location\\).Path + '\\\\', ''\\) }; Write-Output '---'; if \\(Test-Path gradle\\\\libs.versions.toml\\) { Get-Content gradle\\\\libs.versions.toml })",
+      "PowerShell(try { [xml]$m = \\(Invoke-WebRequest 'https://dl.google.com/android/maven2/androidx/compose/compose-bom/maven-metadata.xml' -UseBasicParsing\\).Content; $m.metadata.versioning.versions.version | Select-Object -Last 6 } catch { Write-Output \"bom lookup failed: $\\($_.Exception.Message\\)\" }; Write-Output '--- KSP ---'; try { $r = Invoke-RestMethod 'https://search.maven.org/solrsearch/select?q=g:%22com.google.devtools.ksp%22+AND+a:%22symbol-processing-api%22&core=gav&rows=12&wt=json'; $r.response.docs | Select-Object -ExpandProperty v } catch { Write-Output \"ksp lookup failed: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(.\\\\gradlew.bat assembleDebug --console=plain)",
+      "PowerShell($sdk = 'C:\\\\Users\\\\rajveer\\\\AppData\\\\Local\\\\Android\\\\Sdk'; $mgr = \"$sdk\\\\cmdline-tools\\\\latest\\\\bin\\\\sdkmanager.bat\"; if \\(-not \\(Test-Path $mgr\\)\\) { Get-ChildItem \"$sdk\\\\cmdline-tools\" -Directory | Select-Object -ExpandProperty Name } else { echo y | & $mgr \"platforms;android-37\" })",
+      "PowerShell(New-Item *)",
+      "PowerShell(& \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" devices)",
+      "PowerShell(try { $r = Invoke-RestMethod 'https://search.maven.org/solrsearch/select?q=g:%22org.robolectric%22+AND+a:%22robolectric%22&rows=3&wt=json'; $r.response.docs | Select-Object id, latestVersion } catch { Write-Output \"lookup failed: $\\($_.Exception.Message\\)\" }; try { $r2 = Invoke-RestMethod 'https://search.maven.org/solrsearch/select?q=g:%22androidx.test%22+AND+a:%22core%22&rows=3&wt=json'; $r2.response.docs | Select-Object id, latestVersion } catch { Write-Output \"lookup failed: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(try { [xml]$m = \\(Invoke-WebRequest 'https://dl.google.com/android/maven2/androidx/test/core/maven-metadata.xml' -UseBasicParsing\\).Content; Write-Output \"androidx.test:core release: $\\($m.metadata.versioning.release\\)\" } catch { Write-Output \"lookup failed\" }; try { $r = Invoke-RestMethod 'https://search.maven.org/solrsearch/select?q=g:%22org.jetbrains.kotlinx%22+AND+a:%22kotlinx-coroutines-test%22&rows=2&wt=json'; $r.response.docs | Select-Object id, latestVersion } catch { Write-Output \"lookup failed\" })",
+      "PowerShell(.\\\\gradlew.bat testDebugUnitTest --tests \"com.journeytix.taskcluster.data.db.TaskDaoTest\" --console=plain)",
+      "PowerShell(.\\\\gradlew.bat testDebugUnitTest --console=plain)",
+      "PowerShell(.\\\\gradlew.bat assembleDebug testDebugUnitTest --console=plain)",
+      "PowerShell(\\(Get-Content design-reference\\\\ui_kits\\\\taskcluster\\\\tcApp.jsx | Measure-Object -Line\\).Lines)",
+      "PowerShell(.\\\\gradlew.bat testDebugUnitTest --tests \"com.journeytix.taskcluster.ui.screens.settings.SettingsScreenTest\" --console=plain)",
+      "PowerShell(.\\\\gradlew.bat testDebugUnitTest --tests \"com.journeytix.taskcluster.ui.screens.trash.TrashScreenTest\" --console=plain)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\rajveer\\\\AndroidStudioProjects\\\\TaskCluster2\" -Recurse -Directory | Where-Object {$_.Name -match \"^\\(ui|theme|screens|components\\)$\"} | Select-Object -ExpandProperty FullName | Sort-Object)",
+      "PowerShell(ConvertTo-String *)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(adb logcat *)",
+      "PowerShell(adb logcat *)",
+      "PowerShell(adb install *)",
+      "PowerShell(adb uninstall *)",
+      "Bash(./gradlew assembleDebug --dry-run)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

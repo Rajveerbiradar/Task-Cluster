@@ -1,0 +1,35 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Radii & elevation" subtitle="Soft editorial corners; shadows only on things that truly float" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 24px 26px; background: var(--canvas); display:flex; gap: 40px; align-items:flex-start; }
+  .row { display:flex; gap: 14px; }
+  .box { width: 64px; height: 64px; background: var(--surface); border: 1px solid var(--hairline-strong); display:flex; align-items:flex-end; justify-content:center; padding-bottom:6px; }
+  .t { font: 400 10px/1.2 var(--font-sans); color: var(--ink-500); }
+  .lbl { font: 500 11px/1 var(--font-sans); color: var(--ink-400); margin-bottom: 12px; }
+  .elev { width: 96px; height: 64px; background: var(--surface-raised); border-radius: 999px; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="lbl">radii</div>
+    <div class="row">
+      <div class="box" style="border-radius:6px"><span class="t">6</span></div>
+      <div class="box" style="border-radius:8px"><span class="t">8</span></div>
+      <div class="box" style="border-radius:12px"><span class="t">12</span></div>
+      <div class="box" style="border-radius:16px"><span class="t">16</span></div>
+      <div class="box" style="border-radius:999px"><span class="t">pill</span></div>
+    </div>
+  </div>
+  <div>
+    <div class="lbl">elevation</div>
+    <div class="row">
+      <div class="elev" style="box-shadow: var(--shadow-pill)"></div>
+      <div class="elev" style="box-shadow: var(--shadow-overlay)"></div>
+    </div>
+  </div>
+</body>
+</html>

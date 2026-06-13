@@ -1,0 +1,40 @@
+<!-- @dsCard group="Colors" viewport="700x190" name="Paper & ink ramp" subtitle="Warm canvas, surfaces, and the neutral ink scale that carries ~90% of the UI" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 20px; background: #fff; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sw { width: 96px; }
+  .chip { height: 56px; border-radius: 10px; border: 1px solid var(--hairline-strong); }
+  .name { font: 500 12px/1.3 var(--font-sans); color: var(--ink-900); margin-top: 6px; }
+  .hex  { font: 400 11px/1.3 var(--font-sans); color: var(--ink-500); }
+  .group { display:flex; gap: 22px; }
+  .lbl { font: 500 11px/1 var(--font-sans); color: var(--ink-400); letter-spacing:.04em; margin-bottom:10px; }
+</style>
+</head>
+<body>
+  <div class="group">
+    <div>
+      <div class="lbl">paper</div>
+      <div class="row">
+        <div class="sw"><div class="chip" style="background:var(--canvas)"></div><div class="name">canvas</div><div class="hex">#F1EFE8</div></div>
+        <div class="sw"><div class="chip" style="background:var(--surface)"></div><div class="name">surface</div><div class="hex">#FBFAF6</div></div>
+        <div class="sw"><div class="chip" style="background:var(--surface-raised)"></div><div class="name">raised</div><div class="hex">#FFFFFF</div></div>
+        <div class="sw"><div class="chip" style="background:var(--surface-sunken)"></div><div class="name">sunken</div><div class="hex">#ECEAE2</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl">ink</div>
+      <div class="row">
+        <div class="sw"><div class="chip" style="background:var(--ink-900)"></div><div class="name">ink-900</div><div class="hex">#2C2C2A</div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink-600)"></div><div class="name">ink-600</div><div class="hex">#6E6B63</div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink-400)"></div><div class="name">ink-400</div><div class="hex">#A8A498</div></div>
+        <div class="sw"><div class="chip" style="background:var(--ink-300)"></div><div class="name">ink-300</div><div class="hex">#C6C2B6</div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
