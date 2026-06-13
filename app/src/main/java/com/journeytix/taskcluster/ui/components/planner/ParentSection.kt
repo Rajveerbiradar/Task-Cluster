@@ -5,9 +5,12 @@ import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.TextStyle
@@ -54,6 +56,7 @@ import com.journeytix.taskcluster.ui.theme.TrackSnug
 
 /* ParentSection — a light container that visibly holds its SectionCards.
    Tap the header to toggle children; long-press for the context menu. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ParentSection(
     title: String,
@@ -68,7 +71,7 @@ fun ParentSection(
     onEmojiClick: ((IntOffset) -> Unit)? = null,
     content: (@Composable () -> Unit)? = null,
 ) {
-    var rootOrigin by remember { mutableStateOf(Offset.Zero) }
+    var headerCenter by remember { mutableStateOf(Offset.Zero) }
     val shape = RoundedCornerShape(RadiusXl)
     Column(
         modifier = modifier
@@ -81,38 +84,45 @@ fun ParentSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 44.dp)
-                .onGloballyPositioned { rootOrigin = it.positionInRoot() }
-                .pointerInput(expanded) {
-                    detectTapGestures(
-                        onTap = { onToggle(!expanded) },
-                        onLongPress = { offset ->
-                            onMenu?.invoke(
-                                IntOffset(
-                                    (rootOrigin.x + offset.x).toInt(),
-                                    (rootOrigin.y + offset.y).toInt(),
-                                )
-                            )
-                        },
+                .onGloballyPositioned { coords ->
+                    val pos = coords.positionInRoot()
+                    headerCenter = Offset(
+                        pos.x + coords.size.width / 2f,
+                        pos.y + coords.size.height / 2f,
                     )
                 }
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onToggle(!expanded) },
+                    onLongClick = {
+                        onMenu?.invoke(
+                            IntOffset(headerCenter.x.toInt(), headerCenter.y.toInt())
+                        )
+                    },
+                )
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            var emojiOrigin by remember { mutableStateOf(Offset.Zero) }
+            var emojiCenter by remember { mutableStateOf(Offset.Zero) }
             if (emoji != null) {
                 Box(
                     modifier = Modifier
-                        .onGloballyPositioned { emojiOrigin = it.positionInRoot() }
-                        .pointerInput(onEmojiClick) {
-                            detectTapGestures(onTap = { offset ->
-                                onEmojiClick?.invoke(
-                                    IntOffset(
-                                        (emojiOrigin.x + offset.x).toInt(),
-                                        (emojiOrigin.y + offset.y).toInt(),
-                                    )
-                                )
-                            })
+                        .onGloballyPositioned { coords ->
+                            val pos = coords.positionInRoot()
+                            emojiCenter = Offset(
+                                pos.x + coords.size.width / 2f,
+                                pos.y + coords.size.height / 2f,
+                            )
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            onEmojiClick?.invoke(
+                                IntOffset(emojiCenter.x.toInt(), emojiCenter.y.toInt())
+                            )
                         },
                 ) {
                     Text(text = emoji, fontSize = 18.sp)
@@ -130,16 +140,20 @@ fun ParentSection(
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(Ink400.copy(alpha = 0.2f))
-                        .onGloballyPositioned { emojiOrigin = it.positionInRoot() }
-                        .pointerInput(onEmojiClick) {
-                            detectTapGestures(onTap = { offset ->
-                                onEmojiClick.invoke(
-                                    IntOffset(
-                                        (emojiOrigin.x + offset.x).toInt(),
-                                        (emojiOrigin.y + offset.y).toInt(),
-                                    )
-                                )
-                            })
+                        .onGloballyPositioned { coords ->
+                            val pos = coords.positionInRoot()
+                            emojiCenter = Offset(
+                                pos.x + coords.size.width / 2f,
+                                pos.y + coords.size.height / 2f,
+                            )
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            onEmojiClick.invoke(
+                                IntOffset(emojiCenter.x.toInt(), emojiCenter.y.toInt())
+                            )
                         },
                 )
             }

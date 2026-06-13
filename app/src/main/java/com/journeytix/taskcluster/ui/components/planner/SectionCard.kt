@@ -5,9 +5,13 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,9 +35,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.annotation.DrawableRes
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,11 +45,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
 import com.journeytix.taskcluster.ui.components.core.TaskIcon
 import com.journeytix.taskcluster.ui.components.core.TaskIcons
 import com.journeytix.taskcluster.ui.theme.DurBase
@@ -53,7 +55,6 @@ import com.journeytix.taskcluster.ui.theme.GeneralSans
 import com.journeytix.taskcluster.ui.theme.Hairline
 import com.journeytix.taskcluster.ui.theme.Ink400
 import com.journeytix.taskcluster.ui.theme.Ink500
-import com.journeytix.taskcluster.ui.theme.Ink600
 import com.journeytix.taskcluster.ui.theme.Ink900
 import com.journeytix.taskcluster.ui.theme.Primary
 import com.journeytix.taskcluster.ui.theme.RadiusLg
@@ -72,6 +73,7 @@ private const val PINNED_CHEVRON_ALPHA = 0.35f
 /* SectionCard — a section sits on a subtle surface. Tap the header to
    expand/collapse; long-press for the context menu (pinned sections have
    no menu and a dimmed chevron — Daily can never be deleted). */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SectionCard(
     title: String,
@@ -96,7 +98,7 @@ fun SectionCard(
         label = "progress",
     )
 
-    var rootOrigin by remember { mutableStateOf(Offset.Zero) }
+    var headerCenter by remember { mutableStateOf(Offset.Zero) }
     val shape = RoundedCornerShape(RadiusLg)
     Column(
         modifier = modifier
@@ -109,43 +111,50 @@ fun SectionCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 56.dp)
-                .onGloballyPositioned { rootOrigin = it.positionInRoot() }
-                .pointerInput(pinned, expanded) {
-                    detectTapGestures(
-                        onTap = { onToggle(!expanded) },
-                        onLongPress = { offset ->
-                            if (!pinned) {
-                                onMenu?.invoke(
-                                    IntOffset(
-                                        (rootOrigin.x + offset.x).toInt(),
-                                        (rootOrigin.y + offset.y).toInt(),
-                                    )
-                                )
-                            }
-                        },
+                .onGloballyPositioned { coords ->
+                    val pos = coords.positionInRoot()
+                    headerCenter = Offset(
+                        pos.x + coords.size.width / 2f,
+                        pos.y + coords.size.height / 2f,
                     )
                 }
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onToggle(!expanded) },
+                    onLongClick = {
+                        if (!pinned) {
+                            onMenu?.invoke(
+                                IntOffset(headerCenter.x.toInt(), headerCenter.y.toInt())
+                            )
+                        }
+                    },
+                )
                 .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(Space3),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            var iconOrigin by remember { mutableStateOf(Offset.Zero) }
+            var iconCenter by remember { mutableStateOf(Offset.Zero) }
             if (iconResId != null) {
                 Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(RadiusSm))
                         .background(SurfaceSunken)
-                        .onGloballyPositioned { iconOrigin = it.positionInRoot() }
-                        .pointerInput(onIconClick) {
-                            detectTapGestures(onTap = { offset ->
-                                onIconClick?.invoke(
-                                    IntOffset(
-                                        (iconOrigin.x + offset.x).toInt(),
-                                        (iconOrigin.y + offset.y).toInt(),
-                                    )
-                                )
-                            })
+                        .onGloballyPositioned { coords ->
+                            val pos = coords.positionInRoot()
+                            iconCenter = Offset(
+                                pos.x + coords.size.width / 2f,
+                                pos.y + coords.size.height / 2f,
+                            )
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            onIconClick?.invoke(
+                                IntOffset(iconCenter.x.toInt(), iconCenter.y.toInt())
+                            )
                         },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -163,7 +172,7 @@ fun SectionCard(
                         fontFamily = GeneralSans,
                         fontWeight = FontWeight.W500,
                         fontSize = 18.sp,
-                        lineHeight = 22.sp, // 1.2
+                        lineHeight = 22.sp,
                         letterSpacing = TrackSnug,
                     ),
                     color = Ink900,

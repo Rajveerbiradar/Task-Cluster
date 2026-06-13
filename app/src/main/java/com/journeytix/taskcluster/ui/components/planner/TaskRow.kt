@@ -1,6 +1,8 @@
 package com.journeytix.taskcluster.ui.components.planner
 
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.testTag
@@ -41,6 +42,7 @@ import com.journeytix.taskcluster.ui.theme.TaskClusterTheme
 /* TaskRow — no surface of its own, divider-separated inside a SectionCard.
    Completed task greys out IN PLACE — never moves. A done task carries no
    urgency, so its pill drops. Long-press reveals the context menu. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskRow(
     title: String,
@@ -56,7 +58,7 @@ fun TaskRow(
     val titleColor = if (checked) Ink300 else Ink900
     val descColor = if (checked) Ink300 else Ink600
 
-    var rootOrigin by remember { mutableStateOf(Offset.Zero) }
+    var rowCenter by remember { mutableStateOf(Offset.Zero) }
     Column(modifier = modifier.fillMaxWidth()) {
         if (divider) {
             Box(
@@ -69,19 +71,23 @@ fun TaskRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .onGloballyPositioned { rootOrigin = it.positionInRoot() }
-                .pointerInput(onMenu) {
-                    detectTapGestures(
-                        onLongPress = { offset ->
-                            onMenu?.invoke(
-                                IntOffset(
-                                    (rootOrigin.x + offset.x).toInt(),
-                                    (rootOrigin.y + offset.y).toInt(),
-                                )
-                            )
-                        },
+                .onGloballyPositioned { coords ->
+                    val pos = coords.positionInRoot()
+                    rowCenter = Offset(
+                        pos.x + coords.size.width / 2f,
+                        pos.y + coords.size.height / 2f,
                     )
                 }
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                    onLongClick = {
+                        onMenu?.invoke(
+                            IntOffset(rowCenter.x.toInt(), rowCenter.y.toInt())
+                        )
+                    },
+                )
                 .padding(vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(Space3),
         ) {
@@ -95,7 +101,7 @@ fun TaskRow(
                         fontFamily = GeneralSans,
                         fontWeight = FontWeight.W400,
                         fontSize = 16.sp,
-                        lineHeight = 22.sp, // 1.35
+                        lineHeight = 22.sp,
                     ),
                     color = titleColor,
                     maxLines = 1,
@@ -108,7 +114,7 @@ fun TaskRow(
                             fontFamily = GeneralSans,
                             fontWeight = FontWeight.W400,
                             fontSize = 14.sp,
-                            lineHeight = 20.sp, // 1.4
+                            lineHeight = 20.sp,
                         ),
                         color = descColor,
                         maxLines = 2,

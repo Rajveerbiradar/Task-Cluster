@@ -37,7 +37,12 @@
       "Bash(git init *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(./gradlew assembleDebug --quiet)"
+      "Bash(./gradlew assembleDebug --quiet)",
+      "Bash(adb devices *)",
+      "PowerShell(adb devices *)",
+      "PowerShell(cd \"C:\\\\Users\\\\rajveer\\\\AndroidStudioProjects\\\\TaskCluster2\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" install -r \"app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\")",
+      "PowerShell(& \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell am start -n com.journeytix.taskcluster/.MainActivity)",
+      "PowerShell(cd \"C:\\\\Users\\\\rajveer\\\\AndroidStudioProjects\\\\TaskCluster2\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" install -r \"app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell am start -n com.journeytix.taskcluster/.MainActivity)"
     ]
   }
 }
