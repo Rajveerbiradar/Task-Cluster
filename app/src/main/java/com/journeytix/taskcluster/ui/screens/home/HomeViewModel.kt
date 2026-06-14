@@ -83,6 +83,7 @@ sealed interface HomeIntent {
         val parentId: Long?,
         val isDaily: Boolean,
         val data: TaskExporter.ImportData,
+        val strategy: ImportStrategy = ImportStrategy.Default,
     ) : HomeIntent
     data class ImportTasksInto(
         val sectionId: Long,
@@ -250,9 +251,35 @@ class HomeViewModel(
                 intent.data.standaloneSections.forEach { insertImportedSection(it, null) }
             }
             is HomeIntent.ImportSectionsInto -> viewModelScope.launch {
-                val sections = intent.data.standaloneSections +
+                val incoming = intent.data.standaloneSections +
                     intent.data.parents.flatMap { it.sections }
-                sections.forEach { insertImportedSection(it, intent.parentId, intent.isDaily) }
+                val existing = if (intent.isDaily) {
+                    state.value.daily.map { it.section }
+                } else {
+                    state.value.parents.firstOrNull { it.parent.id == intent.parentId }
+                        ?.sections?.map { it.section } ?: emptyList()
+                }
+                val used = existing.map { it.title }.toMutableList()
+                incoming.forEach { s ->
+                    val title = s.title.trim().take(80)
+                    val dup = existing.firstOrNull { it.title.equals(title, ignoreCase = true) }
+                    when {
+                        dup == null -> {
+                            used.add(title)
+                            insertImportedSection(s, intent.parentId, intent.isDaily)
+                        }
+                        intent.strategy == ImportStrategy.Skip -> Unit
+                        intent.strategy == ImportStrategy.Replace -> {
+                            repository.deleteSectionPermanently(dup.id)
+                            insertImportedSection(s, intent.parentId, intent.isDaily)
+                        }
+                        else -> {
+                            val unique = uniqueTitle(title, used)
+                            used.add(unique)
+                            insertImportedSection(s.copy(title = unique), intent.parentId, intent.isDaily)
+                        }
+                    }
+                }
             }
             is HomeIntent.ImportTasksInto -> viewModelScope.launch {
                 val tasks = (intent.data.standaloneSections + intent.data.parents.flatMap { it.sections })

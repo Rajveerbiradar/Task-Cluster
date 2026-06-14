@@ -172,10 +172,11 @@ fun ImportSheet(
     }
 }
 
-/* Shown when imported parents clash with existing ones (same title). */
+/* Shown when imported parents or sections clash with existing ones (same title). */
 @Composable
 fun ImportConflictDialog(
     duplicateTitles: List<String>,
+    noun: String,
     onResolve: (com.journeytix.taskcluster.ui.screens.home.ImportStrategy) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -191,7 +192,7 @@ fun ImportConflictDialog(
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "These parents are already here: ${duplicateTitles.joinToString(", ")}. " +
+            text = "These $noun are already here: ${duplicateTitles.joinToString(", ")}. " +
                 "What should the import do with them?",
             style = TextStyle(
                 fontFamily = GeneralSans,

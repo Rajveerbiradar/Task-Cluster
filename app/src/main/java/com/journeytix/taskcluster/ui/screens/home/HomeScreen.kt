@@ -90,6 +90,13 @@ private sealed interface ImportScope {
     data class IntoSection(val sectionId: Long) : ImportScope
 }
 
+/* An import awaiting duplicate-conflict resolution. scope null = global (parents). */
+private data class PendingImport(
+    val data: TaskExporter.ImportData,
+    val scope: ImportScope?,
+    val dupes: List<String>,
+)
+
 private sealed interface TopLevelEntry {
     val createdAt: Long
     data class ParentEntry(val data: ParentWithSections) : TopLevelEntry {
@@ -161,7 +168,7 @@ fun HomeScreen(
     var addTaskSectionId by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     var showImport by remember { mutableStateOf(false) }
-    var importConflict by remember { mutableStateOf<TaskExporter.ImportData?>(null) }
+    var pendingImport by remember { mutableStateOf<PendingImport?>(null) }
     var showAddMethod by remember { mutableStateOf(false) }
     var pendingManualAdd by remember { mutableStateOf<(() -> Unit)?>(null) }
     var importScope by remember { mutableStateOf<ImportScope?>(null) }
@@ -626,46 +633,69 @@ fun HomeScreen(
                             is ImportScope.IntoSection -> {
                                 viewModel.onIntent(HomeIntent.ImportTasksInto(scope.sectionId, data))
                                 Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                                importScope = null
                             }
                             is ImportScope.IntoParent -> {
-                                viewModel.onIntent(HomeIntent.ImportSectionsInto(scope.parentId, scope.isDaily, data))
-                                Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                                // Existing section titles under the target parent / daily.
+                                val existing = if (scope.isDaily) {
+                                    state.daily.map { it.section.title }
+                                } else {
+                                    state.parents.firstOrNull { it.parent.id == scope.parentId }
+                                        ?.sections?.map { it.section.title } ?: emptyList()
+                                }
+                                val incoming = (data.standaloneSections + data.parents.flatMap { it.sections })
+                                    .map { it.title.trim() }
+                                val dupes = incoming.filter { t -> existing.any { it.equals(t, ignoreCase = true) } }.distinct()
+                                if (dupes.isEmpty()) {
+                                    viewModel.onIntent(HomeIntent.ImportSectionsInto(scope.parentId, scope.isDaily, data))
+                                    Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                                    importScope = null
+                                } else {
+                                    pendingImport = PendingImport(data, scope, dupes)
+                                }
                             }
                             null -> {
                                 val dupes = data.parents
                                     .map { it.title.trim() }
                                     .filter { t -> state.parents.any { it.parent.title.equals(t, ignoreCase = true) } }
+                                    .distinct()
                                 if (dupes.isEmpty()) {
                                     viewModel.onIntent(HomeIntent.Import(data))
                                     Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                                    importScope = null
                                 } else {
-                                    importConflict = data // resolve via dialog
+                                    pendingImport = PendingImport(data, null, dupes)
                                 }
                             }
                         }
                     } else {
                         Toast.makeText(context, "Couldn't read that — check the JSON", Toast.LENGTH_SHORT).show()
+                        importScope = null
                     }
                     showImport = false
-                    if (importConflict == null) importScope = null
                 },
                 onDismiss = { showImport = false; importScope = null },
             )
         }
 
-        // Duplicate-parent resolution for an import.
-        importConflict?.let { data ->
-            val dupes = data.parents
-                .map { it.title.trim() }
-                .filter { t -> state.parents.any { it.parent.title.equals(t, ignoreCase = true) } }
+        // Duplicate resolution for an import (parents for global, sections when scoped).
+        pendingImport?.let { pending ->
+            val noun = if (pending.scope is ImportScope.IntoParent) "sections" else "parents"
             ImportConflictDialog(
-                duplicateTitles = dupes,
+                duplicateTitles = pending.dupes,
+                noun = noun,
                 onResolve = { strategy ->
-                    viewModel.onIntent(HomeIntent.Import(data, strategy))
+                    when (val sc = pending.scope) {
+                        null -> viewModel.onIntent(HomeIntent.Import(pending.data, strategy))
+                        is ImportScope.IntoParent ->
+                            viewModel.onIntent(HomeIntent.ImportSectionsInto(sc.parentId, sc.isDaily, pending.data, strategy))
+                        is ImportScope.IntoSection -> Unit
+                    }
                     Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
-                    importConflict = null
+                    pendingImport = null
+                    importScope = null
                 },
-                onDismiss = { importConflict = null },
+                onDismiss = { pendingImport = null; importScope = null },
             )
         }
 
