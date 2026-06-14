@@ -54,6 +54,7 @@ sealed interface HomeIntent {
     data class ToggleTask(val task: Task, val checked: Boolean) : HomeIntent
     data class ToggleSection(val id: Long) : HomeIntent
     data class ToggleParent(val id: Long) : HomeIntent
+    data class RevealTask(val parentId: Long?, val sectionId: Long) : HomeIntent
     data class AddTask(
         val sectionId: Long,
         val title: String,
@@ -64,7 +65,7 @@ sealed interface HomeIntent {
 
     // Creation
     data class CreateParent(val title: String, val emoji: String?, val scheduledDate: String?) : HomeIntent
-    data class CreateSection(val title: String, val parentId: Long?, val iconKey: String?, val scheduledDate: String?) : HomeIntent
+    data class CreateSection(val title: String, val parentId: Long?, val iconKey: String?, val scheduledDate: String?, val isDaily: Boolean = false) : HomeIntent
 
     // Parent actions
     data class AddSectionToParent(val parentId: Long) : HomeIntent
@@ -168,6 +169,13 @@ class HomeViewModel(
             is HomeIntent.ToggleParent -> localUi.update {
                 it.copy(expandedParents = it.expandedParents.toggled(intent.id))
             }
+            is HomeIntent.RevealTask -> localUi.update {
+                it.copy(
+                    dailyExpanded = if (intent.parentId == null && state.value.daily.any { s -> s.section.id == intent.sectionId }) true else it.dailyExpanded,
+                    expandedParents = if (intent.parentId != null) it.expandedParents + intent.parentId else it.expandedParents,
+                    expandedSections = it.expandedSections + intent.sectionId,
+                )
+            }
             is HomeIntent.ToggleTask -> {
                 if (state.value.isReadOnly) return
                 viewModelScope.launch {
@@ -196,7 +204,7 @@ class HomeViewModel(
                 repository.addParent(Parent(title = intent.title, emoji = intent.emoji, scheduledDate = intent.scheduledDate))
             }
             is HomeIntent.CreateSection -> viewModelScope.launch {
-                repository.addSection(Section(title = intent.title, parentId = intent.parentId, iconKey = intent.iconKey, scheduledDate = intent.scheduledDate))
+                repository.addSection(Section(title = intent.title, parentId = intent.parentId, iconKey = intent.iconKey, scheduledDate = intent.scheduledDate, isDaily = intent.isDaily))
             }
             is HomeIntent.AddSectionToParent -> viewModelScope.launch {
                 repository.addSection(Section(title = "new section", parentId = intent.parentId))

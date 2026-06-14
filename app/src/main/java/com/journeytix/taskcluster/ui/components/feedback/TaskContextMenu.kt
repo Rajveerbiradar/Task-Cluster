@@ -1,5 +1,10 @@
 package com.journeytix.taskcluster.ui.components.feedback
 
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -112,6 +120,19 @@ fun TaskContextMenu(
     var sub by remember(open) { mutableStateOf<ContextMenuItem?>(null) }
     val displayItems = sub?.submenu ?: items
 
+    // Spring entrance: scale + fade in from the anchor point.
+    val visible = remember(open) { MutableTransitionState(false) }
+    LaunchedEffect(open) { visible.targetState = true }
+    val transition = rememberTransition(visible, label = "menu")
+    val scale by transition.animateFloat(
+        transitionSpec = { spring(dampingRatio = 0.7f, stiffness = 300f) },
+        label = "scale",
+    ) { if (it) 1f else 0.85f }
+    val alpha by transition.animateFloat(
+        transitionSpec = { tween(120) },
+        label = "alpha",
+    ) { if (it) 1f else 0f }
+
     Popup(
         popupPositionProvider = remember(anchor) { ContextMenuPositionProvider(anchor) },
         onDismissRequest = onClose,
@@ -119,6 +140,12 @@ fun TaskContextMenu(
         val shape = RoundedCornerShape(RadiusMd)
         Column(
             modifier = modifier
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                    transformOrigin = TransformOrigin(0f, 0f)
+                }
                 .widthIn(min = 160.dp, max = 200.dp)
                 .shadow(8.dp, shape)
                 .background(SurfaceRaised, shape)

@@ -36,6 +36,7 @@ import com.journeytix.taskcluster.ui.theme.Hairline
 import com.journeytix.taskcluster.ui.theme.Ink300
 import com.journeytix.taskcluster.ui.theme.Ink600
 import com.journeytix.taskcluster.ui.theme.Ink900
+import com.journeytix.taskcluster.ui.theme.PrimaryTint
 import com.journeytix.taskcluster.ui.theme.Space3
 import com.journeytix.taskcluster.ui.theme.TaskClusterTheme
 
@@ -53,13 +54,18 @@ fun TaskRow(
     status: TimePillStatus = TimePillStatus.Calm,
     time: String? = null,
     divider: Boolean = false,
+    highlighted: Boolean = false,
     onMenu: ((IntOffset) -> Unit)? = null,
 ) {
     val titleColor = if (checked) Ink300 else Ink900
     val descColor = if (checked) Ink300 else Ink600
 
     var rowCenter by remember { mutableStateOf(Offset.Zero) }
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(if (highlighted) PrimaryTint else androidx.compose.ui.graphics.Color.Transparent),
+    ) {
         if (divider) {
             Box(
                 modifier = Modifier

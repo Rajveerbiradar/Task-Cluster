@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +65,9 @@ import org.koin.androidx.compose.koinViewModel
 private val HeaderDateFormat = DateTimeFormatter.ofPattern("EEE, MMM d", Locale.ENGLISH)
 private const val DAILY_PARENT_ID = -1L
 
+// Highlighted task id for the search "reveal & blink" flow (null = none).
+private val LocalBlinkTaskId = androidx.compose.runtime.compositionLocalOf<Long?> { null }
+
 private fun weekOf(date: LocalDate): List<DateStripDay> {
     val monday = date.minusDays((date.dayOfWeek.value - 1).toLong())
     return (0..6).map { i ->
@@ -109,7 +113,27 @@ fun HomeScreen(
     var showSearch by remember { mutableStateOf(false) }
     var taskMenuAnchor by remember { mutableStateOf<IntOffset?>(null) }
     var menuTaskId by remember { mutableStateOf<Long?>(null) }
+    var dailyMenuAnchor by remember { mutableStateOf<IntOffset?>(null) }
+    var creatingDailySection by remember { mutableStateOf(false) }
+    var blinkTaskId by remember { mutableStateOf<Long?>(null) }
+    var blinkVisible by remember { mutableStateOf(false) }
 
+    // Blink the revealed task twice, then clear.
+    LaunchedEffect(blinkTaskId) {
+        if (blinkTaskId != null) {
+            repeat(2) {
+                blinkVisible = true
+                kotlinx.coroutines.delay(280)
+                blinkVisible = false
+                kotlinx.coroutines.delay(220)
+            }
+            blinkTaskId = null
+        }
+    }
+
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalBlinkTaskId provides blinkTaskId.takeIf { blinkVisible }
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -224,6 +248,7 @@ fun HomeScreen(
                         onToggle = { viewModel.onIntent(HomeIntent.ToggleDaily) },
                         pinned = true,
                         emoji = state.dailyEmoji,
+                        onMenu = { anchor -> dailyMenuAnchor = anchor },
                         onEmojiClick = { anchor -> emojiTarget = DAILY_PARENT_ID to anchor },
                         count = state.daily.size.toString(),
                         modifier = Modifier.testTag("daily-parent"),
@@ -391,6 +416,23 @@ fun HomeScreen(
             } ?: emptyList(),
         )
 
+        // Daily parent context menu (pinned — add section / emoji only)
+        TaskContextMenu(
+            open = dailyMenuAnchor != null,
+            anchor = dailyMenuAnchor ?: IntOffset.Zero,
+            onClose = { dailyMenuAnchor = null },
+            items = listOf(
+                ContextMenuItem(label = "Add section", icon = TaskIcons.Plus, onClick = {
+                    creatingDailySection = true
+                    nameFormParentId = null
+                    showNameForm = NameFormMode.Section
+                }),
+                ContextMenuItem(label = "Emoji", icon = TaskIcons.Smile, onClick = {
+                    emojiTarget = DAILY_PARENT_ID to (dailyMenuAnchor ?: IntOffset.Zero)
+                }),
+            ),
+        )
+
         // AddChooser overlay
         if (showAddChooser) {
             AddChooser(
@@ -422,7 +464,7 @@ fun HomeScreen(
                         }
                         NameFormMode.Section -> {
                             val scheduledDate = if (state.selected.isAfter(state.today)) state.selected.toString() else null
-                            viewModel.onIntent(HomeIntent.CreateSection(title, nameFormParentId, null, scheduledDate))
+                            viewModel.onIntent(HomeIntent.CreateSection(title, nameFormParentId, null, scheduledDate, isDaily = creatingDailySection))
                         }
                         NameFormMode.RenameParent -> {
                             renameParentId?.let { viewModel.onIntent(HomeIntent.RenameParent(it, title)) }
@@ -436,6 +478,7 @@ fun HomeScreen(
                     renameParentId = null
                     renameSectionId = null
                     renameInitialTitle = ""
+                    creatingDailySection = false
                 },
                 onDismiss = {
                     showNameForm = null
@@ -443,6 +486,7 @@ fun HomeScreen(
                     renameParentId = null
                     renameSectionId = null
                     renameInitialTitle = ""
+                    creatingDailySection = false
                 },
             )
         }
@@ -506,7 +550,20 @@ fun HomeScreen(
             SearchOverlay(
                 allTasks = allTasks,
                 onDismiss = { showSearch = false },
-                onTaskClick = { showSearch = false },
+                onTaskClick = { task ->
+                    showSearch = false
+                    // Find which section/parent holds the task, then reveal + blink it.
+                    val parentId = state.parents.firstOrNull { p ->
+                        p.sections.any { s -> s.tasks.any { it.id == task.id } }
+                    }?.parent?.id
+                    viewModel.onIntent(HomeIntent.RevealTask(parentId, task.sectionId))
+                    if (state.page != HomePage.Home && parentId == null &&
+                        state.daily.any { it.section.id == task.sectionId }
+                    ) {
+                        viewModel.onIntent(HomeIntent.SetPage(HomePage.Home))
+                    }
+                    blinkTaskId = task.id
+                },
             )
         }
 
@@ -522,6 +579,7 @@ fun HomeScreen(
                 onDismiss = { showCalendar = false },
             )
         }
+    }
     }
 }
 
@@ -596,6 +654,7 @@ private fun SectionBlock(
                     status = status,
                     time = time,
                     divider = index > 0,
+                    highlighted = task.id == LocalBlinkTaskId.current,
                     onToggle = { checked ->
                         viewModel.onIntent(HomeIntent.ToggleTask(task, checked))
                     },
