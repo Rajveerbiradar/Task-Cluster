@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -227,14 +229,14 @@ fun SectionCard(
         if (content != null) {
             AnimatedVisibility(
                 visible = expanded,
-                enter = expandVertically(
+                enter = fadeIn(spring(stiffness = SpringStiffness)) + expandVertically(
                     spring(
                         dampingRatio = SpringDamping,
                         stiffness = SpringStiffness,
                         visibilityThreshold = IntSize.VisibilityThreshold,
                     )
                 ),
-                exit = shrinkVertically(
+                exit = fadeOut(spring(stiffness = SpringStiffness)) + shrinkVertically(
                     spring(
                         dampingRatio = SpringDamping,
                         stiffness = SpringStiffness,

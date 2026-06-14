@@ -667,7 +667,21 @@ private fun ParentBlock(
         onMenu = { anchor -> onMenu(parent, anchor) },
         onEmojiClick = { anchor -> onEmojiClick(parent.id, anchor) },
     ) {
-        sections.forEach { SectionBlock(it, viewModel, now, onSectionMenu, onIconClick, onTaskMenu) }
+        if (sections.isEmpty()) {
+            Text(
+                text = "No sections yet — long press to add one.",
+                style = TextStyle(
+                    fontFamily = GeneralSans,
+                    fontWeight = FontWeight.W400,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                ),
+                color = Ink400,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+        } else {
+            sections.forEach { SectionBlock(it, viewModel, now, onSectionMenu, onIconClick, onTaskMenu) }
+        }
     }
 }
 
