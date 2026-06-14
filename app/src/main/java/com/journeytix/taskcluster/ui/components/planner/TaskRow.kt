@@ -55,6 +55,7 @@ fun TaskRow(
     time: String? = null,
     divider: Boolean = false,
     highlighted: Boolean = false,
+    onClick: (() -> Unit)? = null,
     onMenu: ((IntOffset) -> Unit)? = null,
 ) {
     val titleColor = if (checked) Ink300 else Ink900
@@ -87,7 +88,7 @@ fun TaskRow(
                 .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = {},
+                    onClick = { onClick?.invoke() },
                     onLongClick = {
                         onMenu?.invoke(
                             IntOffset(rowCenter.x.toInt(), rowCenter.y.toInt())

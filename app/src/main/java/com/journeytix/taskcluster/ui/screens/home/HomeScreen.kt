@@ -68,6 +68,9 @@ private const val DAILY_PARENT_ID = -1L
 // Highlighted task id for the search "reveal & blink" flow (null = none).
 private val LocalBlinkTaskId = androidx.compose.runtime.compositionLocalOf<Long?> { null }
 
+// Opens the full-detail dialog for a tapped task (titles/descriptions truncate in the row).
+private val LocalOpenTask = androidx.compose.runtime.compositionLocalOf<(com.journeytix.taskcluster.data.model.Task) -> Unit> { {} }
+
 private fun weekOf(date: LocalDate): List<DateStripDay> {
     val monday = date.minusDays((date.dayOfWeek.value - 1).toLong())
     return (0..6).map { i ->
@@ -117,6 +120,7 @@ fun HomeScreen(
     var creatingDailySection by remember { mutableStateOf(false) }
     var blinkTaskId by remember { mutableStateOf<Long?>(null) }
     var blinkVisible by remember { mutableStateOf(false) }
+    var detailTask by remember { mutableStateOf<com.journeytix.taskcluster.data.model.Task?>(null) }
 
     // Blink the revealed task twice, then clear.
     LaunchedEffect(blinkTaskId) {
@@ -132,7 +136,8 @@ fun HomeScreen(
     }
 
     androidx.compose.runtime.CompositionLocalProvider(
-        LocalBlinkTaskId provides blinkTaskId.takeIf { blinkVisible }
+        LocalBlinkTaskId provides blinkTaskId.takeIf { blinkVisible },
+        LocalOpenTask provides { task -> detailTask = task },
     ) {
     Box(
         modifier = Modifier
@@ -582,7 +587,54 @@ fun HomeScreen(
                 onDismiss = { showCalendar = false },
             )
         }
+
+        // Task detail — full title + description (rows truncate).
+        detailTask?.let { task ->
+            TaskDetailDialog(
+                task = task,
+                now = now,
+                onDismiss = { detailTask = null },
+            )
+        }
     }
+    }
+}
+
+@Composable
+private fun TaskDetailDialog(
+    task: com.journeytix.taskcluster.data.model.Task,
+    now: Long,
+    onDismiss: () -> Unit,
+) {
+    val (status, time) = timePillFor(task, now)
+    com.journeytix.taskcluster.ui.components.feedback.PopupShell(onDismiss = onDismiss) {
+        Text(
+            text = task.title,
+            style = TextStyle(
+                fontFamily = GeneralSans,
+                fontWeight = FontWeight.W500,
+                fontSize = 20.sp,
+            ),
+            color = Ink900,
+        )
+        if (task.description.isNotBlank()) {
+            Text(
+                text = task.description,
+                style = TextStyle(
+                    fontFamily = GeneralSans,
+                    fontWeight = FontWeight.W400,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                ),
+                color = Ink700,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+        if (time != null && status != com.journeytix.taskcluster.ui.components.planner.TimePillStatus.Calm) {
+            Box(modifier = Modifier.padding(top = 16.dp)) {
+                com.journeytix.taskcluster.ui.components.planner.TimePill(status = status, label = time)
+            }
+        }
     }
 }
 
@@ -626,6 +678,7 @@ private fun SectionBlock(
     onTaskMenu: ((Long, IntOffset) -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsState()
+    val openTask = LocalOpenTask.current
     val section = sectionWithTasks.section
     val (sectionStatus, sectionTime) = aggregatePill(sectionWithTasks.tasks, now)
     SectionCard(
@@ -664,6 +717,7 @@ private fun SectionBlock(
                     time = time,
                     divider = index > 0,
                     highlighted = task.id == LocalBlinkTaskId.current,
+                    onClick = { openTask(task) },
                     onToggle = { checked ->
                         viewModel.onIntent(HomeIntent.ToggleTask(task, checked))
                     },

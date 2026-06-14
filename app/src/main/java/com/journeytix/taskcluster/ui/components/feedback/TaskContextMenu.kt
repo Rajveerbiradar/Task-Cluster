@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -120,14 +121,17 @@ fun TaskContextMenu(
     var sub by remember(open) { mutableStateOf<ContextMenuItem?>(null) }
     val displayItems = sub?.submenu ?: items
 
-    // Spring entrance: scale + fade in from the anchor point.
+    // Spring entrance: scale + fade in, growing from the corner nearest the touch.
+    val windowWidth = LocalWindowInfo.current.containerSize.width
+    val fromRight = windowWidth > 0 && anchor.x > windowWidth / 2
+    val originX = if (fromRight) 1f else 0f
     val visible = remember(open) { MutableTransitionState(false) }
     LaunchedEffect(open) { visible.targetState = true }
     val transition = rememberTransition(visible, label = "menu")
     val scale by transition.animateFloat(
-        transitionSpec = { spring(dampingRatio = 0.7f, stiffness = 300f) },
+        transitionSpec = { spring(dampingRatio = 0.7f, stiffness = 320f) },
         label = "scale",
-    ) { if (it) 1f else 0.85f }
+    ) { if (it) 1f else 0.9f }
     val alpha by transition.animateFloat(
         transitionSpec = { tween(120) },
         label = "alpha",
@@ -144,10 +148,15 @@ fun TaskContextMenu(
                     scaleX = scale
                     scaleY = scale
                     this.alpha = alpha
-                    transformOrigin = TransformOrigin(0f, 0f)
+                    transformOrigin = TransformOrigin(originX, 0f)
                 }
                 .widthIn(min = 160.dp, max = 200.dp)
-                .shadow(8.dp, shape)
+                .shadow(
+                    elevation = 14.dp,
+                    shape = shape,
+                    ambientColor = Ink900.copy(alpha = 0.16f),
+                    spotColor = Ink900.copy(alpha = 0.22f),
+                )
                 .background(SurfaceRaised, shape)
                 .border(1.dp, HairlineStrong, shape)
                 .padding(6.dp),

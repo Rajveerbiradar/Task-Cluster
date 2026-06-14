@@ -190,17 +190,23 @@ private fun TrashRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 val daysLeft = item.daysLeft?.let { " · ${it}d left" } ?: ""
-                Text(
-                    text = "${item.kind} · Deleted ${formatDate(item.trashedAt)}$daysLeft",
-                    style = TextStyle(
-                        fontFamily = GeneralSans,
-                        fontWeight = FontWeight.W400,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                    ),
-                    color = Ink500,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
+                Row(
+                    modifier = Modifier.padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    KindTag(kind = item.kind)
+                    Text(
+                        text = "Deleted ${formatDate(item.trashedAt)}$daysLeft",
+                        style = TextStyle(
+                            fontFamily = GeneralSans,
+                            fontWeight = FontWeight.W400,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                        ),
+                        color = Ink500,
+                    )
+                }
             }
             PillAction(text = "Restore", onClick = onRestore)
             PillAction(text = "Delete", onClick = onDelete)
@@ -214,6 +220,33 @@ private fun TrashRow(
             )
         }
     }
+}
+
+// Trash tag colours: section = pink, parent = purple, task = grey.
+private val SectionTag = androidx.compose.ui.graphics.Color(0xFFB5547A)
+private val ParentTag = androidx.compose.ui.graphics.Color(0xFF7A5AA8)
+private val TaskTag = Ink500
+
+@Composable
+private fun KindTag(kind: String) {
+    val color = when (kind) {
+        "Section" -> SectionTag
+        "Parent" -> ParentTag
+        else -> TaskTag
+    }
+    val shape = RoundedCornerShape(RadiusPill)
+    Text(
+        text = kind,
+        style = TextStyle(
+            fontFamily = GeneralSans,
+            fontWeight = FontWeight.W500,
+            fontSize = 11.sp,
+        ),
+        color = color,
+        modifier = Modifier
+            .background(color.copy(alpha = 0.13f), shape)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
 }
 
 @Composable

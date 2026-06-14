@@ -159,26 +159,21 @@ fun ParentSection(
                         },
                 )
             }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = TextStyle(
-                        fontFamily = GeneralSans,
-                        fontWeight = FontWeight.W500,
-                        fontSize = 18.sp,
-                        letterSpacing = TrackSnug,
-                    ),
-                    color = Ink600,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (time != null && status != TimePillStatus.Calm) {
-                    TimePill(
-                        status = status,
-                        label = time,
-                        modifier = Modifier.padding(top = 3.dp),
-                    )
-                }
+            Text(
+                text = title,
+                style = TextStyle(
+                    fontFamily = GeneralSans,
+                    fontWeight = FontWeight.W500,
+                    fontSize = 18.sp,
+                    letterSpacing = TrackSnug,
+                ),
+                color = Ink600,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (time != null && status != TimePillStatus.Calm) {
+                TimePill(status = status, label = time)
             }
             if (count != null) {
                 Text(
