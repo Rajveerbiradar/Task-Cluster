@@ -67,6 +67,8 @@ fun ParentSection(
     pinned: Boolean = false,
     favourite: Boolean = false,
     emoji: String? = null,
+    status: TimePillStatus = TimePillStatus.Calm,
+    time: String? = null,
     onMenu: ((IntOffset) -> Unit)? = null,
     onEmojiClick: ((IntOffset) -> Unit)? = null,
     content: (@Composable () -> Unit)? = null,
@@ -157,19 +159,27 @@ fun ParentSection(
                         },
                 )
             }
-            Text(
-                text = title,
-                style = TextStyle(
-                    fontFamily = GeneralSans,
-                    fontWeight = FontWeight.W500,
-                    fontSize = 18.sp,
-                    letterSpacing = TrackSnug,
-                ),
-                color = Ink600,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = TextStyle(
+                        fontFamily = GeneralSans,
+                        fontWeight = FontWeight.W500,
+                        fontSize = 18.sp,
+                        letterSpacing = TrackSnug,
+                    ),
+                    color = Ink600,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (time != null && status != TimePillStatus.Calm) {
+                    TimePill(
+                        status = status,
+                        label = time,
+                        modifier = Modifier.padding(top = 3.dp),
+                    )
+                }
+            }
             if (count != null) {
                 Text(
                     text = count,

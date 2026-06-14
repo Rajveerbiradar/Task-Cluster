@@ -12,4 +12,6 @@ data class Parent(
     val isFavourite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val scheduledDate: String? = null, // ISO date (yyyy-MM-dd), null = today/always visible
+    val isTrashed: Boolean = false,
+    val trashedAt: Long? = null,
 )

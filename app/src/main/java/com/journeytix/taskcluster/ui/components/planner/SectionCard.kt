@@ -177,6 +177,13 @@ fun SectionCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (time != null && status != TimePillStatus.Calm) {
+                    TimePill(
+                        status = status,
+                        label = time,
+                        modifier = Modifier.padding(top = 3.dp),
+                    )
+                }
                 if (total > 0) {
                     Row(
                         modifier = Modifier.padding(top = 8.dp),
@@ -213,7 +220,6 @@ fun SectionCard(
                     }
                 }
             }
-            TimePill(status = status, label = time)
             TaskIcon(
                 icon = if (expanded) TaskIcons.ChevronDown else TaskIcons.ChevronRight,
                 contentDescription = null,

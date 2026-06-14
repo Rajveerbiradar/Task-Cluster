@@ -13,4 +13,6 @@ data class Section(
     val colorKey: String = "default",
     val iconKey: String? = null,
     val scheduledDate: String? = null, // ISO date (yyyy-MM-dd), null = today/always visible
+    val isTrashed: Boolean = false,
+    val trashedAt: Long? = null,
 )

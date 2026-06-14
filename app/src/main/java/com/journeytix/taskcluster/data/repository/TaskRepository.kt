@@ -27,11 +27,17 @@ class TaskRepository(
 
     // Sections
     fun observeSections(): Flow<List<Section>> = sectionDao.observeAll()
+    fun observeTrashedSections(): Flow<List<Section>> = sectionDao.observeTrashed()
     suspend fun getSection(id: Long): Section? = sectionDao.getById(id)
     suspend fun addSection(section: Section): Long = sectionDao.insert(section)
     suspend fun updateSection(section: Section) = sectionDao.update(section)
     suspend fun deleteSection(section: Section) = sectionDao.delete(section)
+    // Soft-delete: move the section (and its tasks, by hiding it) to trash.
     suspend fun deleteSection(id: Long) {
+        sectionDao.trashById(id, System.currentTimeMillis())
+    }
+    suspend fun restoreSection(id: Long) = sectionDao.restoreById(id)
+    suspend fun deleteSectionPermanently(id: Long) {
         taskDao.deleteBySectionId(id)
         sectionDao.deleteById(id)
     }
@@ -39,11 +45,22 @@ class TaskRepository(
 
     // Parents
     fun observeParents(): Flow<List<Parent>> = parentDao.observeAll()
+    fun observeTrashedParents(): Flow<List<Parent>> = parentDao.observeTrashed()
     suspend fun getParent(id: Long): Parent? = parentDao.getById(id)
     suspend fun addParent(parent: Parent): Long = parentDao.insert(parent)
     suspend fun updateParent(parent: Parent) = parentDao.update(parent)
     suspend fun deleteParent(parent: Parent) = parentDao.delete(parent)
+    // Soft-delete: trash the parent and cascade-hide its sections.
     suspend fun deleteParent(id: Long) {
+        val ts = System.currentTimeMillis()
+        sectionDao.trashByParentId(id, ts)
+        parentDao.trashById(id, ts)
+    }
+    suspend fun restoreParent(id: Long) {
+        sectionDao.restoreByParentId(id)
+        parentDao.restoreById(id)
+    }
+    suspend fun deleteParentPermanently(id: Long) {
         val sections = sectionDao.getByParentId(id)
         sections.forEach { taskDao.deleteBySectionId(it.id) }
         sectionDao.deleteByParentId(id)

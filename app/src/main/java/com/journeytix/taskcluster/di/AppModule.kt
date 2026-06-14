@@ -17,7 +17,7 @@ val appModule = module {
     single {
         Room.databaseBuilder(androidContext(), AppDatabase::class.java, "taskcluster.db")
             .fallbackToDestructiveMigration()
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)

@@ -27,7 +27,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.journeytix.taskcluster.data.model.Task
 import com.journeytix.taskcluster.ui.components.core.Page
 import com.journeytix.taskcluster.ui.components.core.TaskButton
 import com.journeytix.taskcluster.ui.components.core.TaskButtonVariant
@@ -56,7 +55,7 @@ private fun formatDate(epochMs: Long?): String =
     } ?: "—"
 
 private sealed interface TrashConfirm {
-    data class Delete(val task: Task) : TrashConfirm
+    data class Delete(val entry: TrashEntry) : TrashConfirm
     data object Empty : TrashConfirm
     data object RestoreAll : TrashConfirm
 }
@@ -95,8 +94,8 @@ fun TrashScreen(
                 state.items.forEachIndexed { index, item ->
                     TrashRow(
                         item = item,
-                        onRestore = { viewModel.onIntent(TrashIntent.Restore(item.task)) },
-                        onDelete = { confirm = TrashConfirm.Delete(item.task) },
+                        onRestore = { viewModel.onIntent(TrashIntent.Restore(item)) },
+                        onDelete = { confirm = TrashConfirm.Delete(item) },
                         divider = index < state.items.lastIndex,
                     )
                 }
@@ -130,10 +129,10 @@ fun TrashScreen(
     when (val c = confirm) {
         is TrashConfirm.Delete -> ConfirmDialog(
             title = "Delete permanently",
-            message = "This task will be permanently deleted. This action cannot be undone.",
+            message = "This ${c.entry.kind.lowercase()} will be permanently deleted. This action cannot be undone.",
             confirmLabel = "Delete",
             onConfirm = {
-                viewModel.onIntent(TrashIntent.DeletePermanently(c.task))
+                viewModel.onIntent(TrashIntent.DeletePermanently(c.entry))
                 confirm = null
             },
             onDismiss = { confirm = null },
@@ -165,7 +164,7 @@ fun TrashScreen(
 
 @Composable
 private fun TrashRow(
-    item: TrashItem,
+    item: TrashEntry,
     onRestore: () -> Unit,
     onDelete: () -> Unit,
     divider: Boolean,
@@ -179,7 +178,7 @@ private fun TrashRow(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.task.title,
+                    text = item.title,
                     style = TextStyle(
                         fontFamily = GeneralSans,
                         fontWeight = FontWeight.W400,
@@ -192,8 +191,7 @@ private fun TrashRow(
                 )
                 val daysLeft = item.daysLeft?.let { " · ${it}d left" } ?: ""
                 Text(
-                    text = "Due ${formatDate(item.task.dueDate)} · " +
-                        "Deleted ${formatDate(item.task.trashedAt)}$daysLeft",
+                    text = "${item.kind} · Deleted ${formatDate(item.trashedAt)}$daysLeft",
                     style = TextStyle(
                         fontFamily = GeneralSans,
                         fontWeight = FontWeight.W400,

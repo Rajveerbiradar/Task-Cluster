@@ -23,14 +23,29 @@ interface SectionDao {
     @Query("SELECT * FROM Section WHERE id = :id")
     suspend fun getById(id: Long): Section?
 
-    @Query("SELECT * FROM Section ORDER BY isDaily DESC, createdAt DESC")
+    @Query("SELECT * FROM Section WHERE isTrashed = 0 ORDER BY isDaily DESC, createdAt DESC")
     fun observeAll(): Flow<List<Section>>
+
+    @Query("SELECT * FROM Section WHERE isTrashed = 1 ORDER BY trashedAt DESC")
+    fun observeTrashed(): Flow<List<Section>>
 
     @Query("SELECT COUNT(*) FROM Section")
     suspend fun count(): Int
 
     @Query("SELECT * FROM Section WHERE parentId = :parentId")
     suspend fun getByParentId(parentId: Long): List<Section>
+
+    @Query("UPDATE Section SET isTrashed = 1, trashedAt = :ts WHERE id = :id")
+    suspend fun trashById(id: Long, ts: Long)
+
+    @Query("UPDATE Section SET isTrashed = 1, trashedAt = :ts WHERE parentId = :parentId")
+    suspend fun trashByParentId(parentId: Long, ts: Long)
+
+    @Query("UPDATE Section SET isTrashed = 0, trashedAt = NULL WHERE id = :id")
+    suspend fun restoreById(id: Long)
+
+    @Query("UPDATE Section SET isTrashed = 0, trashedAt = NULL WHERE parentId = :parentId")
+    suspend fun restoreByParentId(parentId: Long)
 
     @Query("DELETE FROM Section WHERE parentId = :parentId")
     suspend fun deleteByParentId(parentId: Long)

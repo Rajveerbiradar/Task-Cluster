@@ -260,17 +260,26 @@ internal fun timePillFor(task: Task, nowMs: Long): Pair<TimePillStatus, String?>
     }
     val window = (due - task.createdAt).coerceAtLeast(1)
     val fraction = remaining.toDouble() / window
+    // Always show remaining time when a deadline exists; colour ramps with urgency.
     val status = when {
-        fraction > 0.5 -> TimePillStatus.Calm
+        fraction > 0.5 -> TimePillStatus.OnTrack
         fraction > 0.25 -> TimePillStatus.OnTrack
         fraction > 0.1 -> TimePillStatus.Close
         else -> TimePillStatus.Due
     }
-    return if (status == TimePillStatus.Calm) {
-        TimePillStatus.Calm to null
-    } else {
-        status to formatDuration(remaining)
-    }
+    return status to formatDuration(remaining)
+}
+
+/* Aggregate pill for a group of tasks — surfaces the single most urgent
+   (soonest) deadline among the group's active tasks. */
+internal fun aggregatePill(tasks: List<Task>, nowMs: Long): Pair<TimePillStatus, String?> {
+    val soonest = tasks
+        .filter { !it.isCompleted }
+        .mapNotNull { t -> (t.dueTime ?: t.dueDate)?.let { it to t } }
+        .minByOrNull { it.first }
+        ?.second
+        ?: return TimePillStatus.Calm to null
+    return timePillFor(soonest, nowMs)
 }
 
 internal fun formatDuration(ms: Long): String {

@@ -10,7 +10,7 @@ import com.journeytix.taskcluster.data.model.Task
 
 @Database(
     entities = [Task::class, Section::class, Parent::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +29,15 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE Section ADD COLUMN scheduledDate TEXT")
                 db.execSQL("ALTER TABLE Parent ADD COLUMN scheduledDate TEXT")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE Section ADD COLUMN isTrashed INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE Section ADD COLUMN trashedAt INTEGER")
+                db.execSQL("ALTER TABLE Parent ADD COLUMN isTrashed INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE Parent ADD COLUMN trashedAt INTEGER")
             }
         }
     }

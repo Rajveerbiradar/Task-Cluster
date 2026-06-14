@@ -242,12 +242,15 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(Space3),
                 ) {
                     // Daily — pinned, collapsible, emoji editable, never deletable.
+                    val (dailyStatus, dailyTime) = aggregatePill(state.daily.flatMap { it.tasks }, now)
                     ParentSection(
                         title = "daily",
                         expanded = state.dailyExpanded,
                         onToggle = { viewModel.onIntent(HomeIntent.ToggleDaily) },
                         pinned = true,
                         emoji = state.dailyEmoji,
+                        status = dailyStatus,
+                        time = dailyTime,
                         onMenu = { anchor -> dailyMenuAnchor = anchor },
                         onEmojiClick = { anchor -> emojiTarget = DAILY_PARENT_ID to anchor },
                         count = state.daily.size.toString(),
@@ -596,6 +599,7 @@ private fun ParentBlock(
     onTaskMenu: (Long, IntOffset) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    val (parentStatus, parentTime) = aggregatePill(sections.flatMap { it.tasks }, now)
     ParentSection(
         title = parent.title,
         expanded = parent.id in state.expandedParents,
@@ -603,6 +607,8 @@ private fun ParentBlock(
         count = sections.size.toString(),
         favourite = parent.isFavourite,
         emoji = parent.emoji,
+        status = parentStatus,
+        time = parentTime,
         onMenu = { anchor -> onMenu(parent, anchor) },
         onEmojiClick = { anchor -> onEmojiClick(parent.id, anchor) },
     ) {
@@ -621,6 +627,7 @@ private fun SectionBlock(
 ) {
     val state by viewModel.state.collectAsState()
     val section = sectionWithTasks.section
+    val (sectionStatus, sectionTime) = aggregatePill(sectionWithTasks.tasks, now)
     SectionCard(
         title = section.title,
         iconResId = SectionIcons.resIdOrDefault(section.iconKey),
@@ -628,6 +635,8 @@ private fun SectionBlock(
         onToggle = { viewModel.onIntent(HomeIntent.ToggleSection(section.id)) },
         done = sectionWithTasks.done,
         total = sectionWithTasks.total,
+        status = sectionStatus,
+        time = sectionTime,
         pinned = section.isDaily,
         onMenu = if (onSectionMenu != null) { { anchor -> onSectionMenu(section.id, anchor) } } else null,
         onIconClick = if (onIconClick != null) { { anchor -> onIconClick(section.id, anchor) } } else null,
