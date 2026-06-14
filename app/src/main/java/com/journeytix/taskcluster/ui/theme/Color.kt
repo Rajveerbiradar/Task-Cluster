@@ -2,31 +2,31 @@ package com.journeytix.taskcluster.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paper & surfaces (warm)
-val Canvas = Color(0xFFF1EFE8)
-val Surface = Color(0x8CF1EFE8) // 55% opacity
-val SurfaceRaised = Color(0xFFFFFFFF)
-val SurfaceSunken = Color(0xFFECEAE2)
-val ParentFill = Color(0xFFFFFFFF)
+// Paper & surfaces — neutral: white background, grey parents, white sections.
+val Canvas = Color(0xFFFFFFFF)        // app background — white
+val Surface = Color(0xFFFFFFFF)       // section cards — white
+val SurfaceRaised = Color(0xFFFFFFFF) // popups / menus
+val SurfaceSunken = Color(0xFFEDEDED) // inset controls, progress tracks, icon chips
+val ParentFill = Color(0xFFEDEDED)    // parent containers — grey
 
-// Ink ramp (warm-tinted neutrals)
-val Ink900 = Color(0xFF2C2C2A)
-val Ink700 = Color(0xFF4A4843)
-val Ink600 = Color(0xFF6E6B63)
-val Ink500 = Color(0xFF8C887E)
-val Ink400 = Color(0xFFA8A498)
-val Ink300 = Color(0xFFC6C2B6)
-val Ink200 = Color(0xFFDAD6CB)
+// Ink ramp (neutral greys)
+val Ink900 = Color(0xFF1E1E1E)
+val Ink700 = Color(0xFF444444)
+val Ink600 = Color(0xFF6B6B6B)
+val Ink500 = Color(0xFF8A8A8A)
+val Ink400 = Color(0xFFA6A6A6)
+val Ink300 = Color(0xFFC4C4C4)
+val Ink200 = Color(0xFFD8D8D8)
 
 // Hairlines (structure without boxes)
-val Hairline = Color(0x162C2C2A) // ~8.5%
-val HairlineStrong = Color(0x242C2C2A) // ~14%
-val GuideLine = Color(0x292C2C2A) // ~16%
+val Hairline = Color(0x14000000) // ~8%
+val HairlineStrong = Color(0x22000000) // ~13%
+val GuideLine = Color(0x29000000) // ~16%
 
-// Primary: black — buttons, checked, active tab, today
-val Primary = Color(0xFF2C2C2A)
-val PrimaryPress = Color(0xFF1A1A18)
-val PrimaryTint = Color(0xFFE8E5DB)
+// Primary: near-black — buttons, checked, active tab, today
+val Primary = Color(0xFF1E1E1E)
+val PrimaryPress = Color(0xFF000000)
+val PrimaryTint = Color(0xFFE4E4E4)
 val PrimaryOn = Color(0xFFFFFFFF)
 
 // Blue — time pill on-track ONLY
@@ -44,10 +44,10 @@ val OverdueBorder = Color(0xFFE24B4A)
 val OverdueText = Color(0xFF791F1F)
 
 // Feedback surfaces
-val ToastBg = Color(0xFF2C2C2A)
-val ToastText = Color(0xFFFBFAF6)
-val WarnBg = Color(0xFFF6F1E4)
-val WarnBorder = Color(0x1F2C2C2A) // ~12%
+val ToastBg = Color(0xFF1E1E1E)
+val ToastText = Color(0xFFFAFAFA)
+val WarnBg = Color(0xFFF2F2F2)
+val WarnBorder = Color(0x1F000000) // ~12%
 
 // Scrim
-val Scrim = Color(0x52211F1B) // ~32%
+val Scrim = Color(0x52000000) // ~32%

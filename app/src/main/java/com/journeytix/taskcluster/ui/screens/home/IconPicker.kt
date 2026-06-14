@@ -1,7 +1,10 @@
 package com.journeytix.taskcluster.ui.screens.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,14 +18,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -30,12 +39,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.journeytix.taskcluster.ui.components.core.SectionIcons
 import com.journeytix.taskcluster.ui.components.core.TaskIcon
+import com.journeytix.taskcluster.ui.components.core.TaskIconButton
 import com.journeytix.taskcluster.ui.components.core.TaskIcons
 import com.journeytix.taskcluster.ui.components.feedback.PopupShell
 import com.journeytix.taskcluster.ui.theme.GeneralSans
 import com.journeytix.taskcluster.ui.theme.Hairline
-import com.journeytix.taskcluster.ui.theme.Ink600
+import com.journeytix.taskcluster.ui.theme.Ink400
+import com.journeytix.taskcluster.ui.theme.Ink500
 import com.journeytix.taskcluster.ui.theme.Ink900
+import com.journeytix.taskcluster.ui.theme.Primary
+import com.journeytix.taskcluster.ui.theme.PrimaryTint
+import com.journeytix.taskcluster.ui.theme.RadiusSm
 import com.journeytix.taskcluster.ui.theme.Red
 import com.journeytix.taskcluster.ui.theme.SurfaceSunken
 
@@ -44,7 +58,17 @@ fun IconPicker(
     onSelect: (String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val iconKeys = remember { SectionIcons.keys.filter { it != "default" } }
+    val categories = remember { buildIconCategories(SectionIcons.keys) }
+    var selectedCategory by remember { mutableIntStateOf(0) }
+    var query by remember { mutableStateOf("") }
+
+    // Search overrides categories; otherwise show the selected category's keys.
+    val shownKeys = if (query.isBlank()) {
+        categories.getOrNull(selectedCategory)?.keys ?: emptyList()
+    } else {
+        val q = query.trim().lowercase()
+        SectionIcons.keys.filter { it.contains(q) }
+    }
 
     PopupShell(onDismiss = onDismiss) {
         Text(
@@ -56,7 +80,88 @@ fun IconPicker(
             ),
             color = Ink900,
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Search field
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(RadiusSm))
+                .background(SurfaceSunken)
+                .border(1.dp, Hairline, RoundedCornerShape(RadiusSm))
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TaskIcon(TaskIcons.Search, null, size = 18.dp, tint = Ink500)
+            Spacer(modifier = Modifier.width(10.dp))
+            BasicTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.weight(1f),
+                textStyle = TextStyle(
+                    fontFamily = GeneralSans,
+                    fontWeight = FontWeight.W400,
+                    fontSize = 15.sp,
+                    color = Ink900,
+                ),
+                cursorBrush = SolidColor(Primary),
+                singleLine = true,
+                decorationBox = { inner ->
+                    Box {
+                        if (query.isEmpty()) {
+                            Text(
+                                "Search icons",
+                                style = TextStyle(fontFamily = GeneralSans, fontSize = 15.sp),
+                                color = Ink400,
+                            )
+                        }
+                        inner()
+                    }
+                },
+            )
+            if (query.isNotEmpty()) {
+                TaskIconButton(icon = TaskIcons.X, label = "Clear", size = 24.dp, onClick = { query = "" })
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Category tabs (hidden while searching)
+        if (query.isBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                categories.forEachIndexed { index, category ->
+                    val isSelected = index == selectedCategory
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(if (isSelected) PrimaryTint else Hairline)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { selectedCategory = index }
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = category.label,
+                            style = TextStyle(
+                                fontFamily = GeneralSans,
+                                fontWeight = FontWeight.W500,
+                                fontSize = 13.sp,
+                            ),
+                            color = if (isSelected) Primary else Ink500,
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(5),
@@ -66,7 +171,7 @@ fun IconPicker(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(iconKeys) { key ->
+            items(shownKeys) { key ->
                 val resId = SectionIcons.resId(key)
                 if (resId != null) {
                     Box(

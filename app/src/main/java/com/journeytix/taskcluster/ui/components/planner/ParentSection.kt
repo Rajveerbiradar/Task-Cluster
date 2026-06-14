@@ -7,7 +7,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.TextStyle
@@ -43,6 +46,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.journeytix.taskcluster.data.image.ParentImage
 import com.journeytix.taskcluster.ui.components.core.TaskIcon
 import com.journeytix.taskcluster.ui.components.core.TaskIcons
 import com.journeytix.taskcluster.ui.theme.GeneralSans
@@ -129,7 +133,24 @@ fun ParentSection(
                             )
                         },
                 ) {
-                    Text(text = emoji, fontSize = 18.sp)
+                    if (ParentImage.isImage(emoji)) {
+                        val bitmap = remember(emoji) {
+                            BitmapFactory.decodeFile(ParentImage.pathOf(emoji))?.asImageBitmap()
+                        }
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(RoundedCornerShape(6.dp)),
+                            )
+                        } else {
+                            Text(text = "🏷️", fontSize = 18.sp) // file missing — neutral fallback
+                        }
+                    } else {
+                        Text(text = emoji, fontSize = 18.sp)
+                    }
                 }
             } else if (pinned) {
                 Box(

@@ -1,5 +1,6 @@
 package com.journeytix.taskcluster.ui.screens.home
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -8,16 +9,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.journeytix.taskcluster.R
 import com.journeytix.taskcluster.ui.components.core.TaskIcon
 import com.journeytix.taskcluster.ui.components.core.TaskIcons
 import com.journeytix.taskcluster.ui.components.feedback.PopupShell
@@ -47,16 +51,28 @@ fun AddChooser(
         Spacer(modifier = Modifier.height(16.dp))
         ChooserRow(
             label = "New parent",
-            icon = { TaskIcon(TaskIcons.Briefcase, null, tint = Ink600) },
+            icon = {
+                Image(
+                    painter = painterResource(R.drawable.ic_section_folder_03),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+            },
             onClick = { onSelect(AddChooserOption.NewParent) },
         )
         ChooserRow(
             label = "New section",
-            icon = { TaskIcon(TaskIcons.List, null, tint = Ink600) },
+            icon = {
+                Image(
+                    painter = painterResource(R.drawable.ic_section_apple_reminder),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+            },
             onClick = { onSelect(AddChooserOption.NewSection) },
         )
         ChooserRow(
-            label = "Import from .txt",
+            label = "Paste or import",
             icon = { TaskIcon(TaskIcons.Import, null, tint = Ink600) },
             onClick = { onSelect(AddChooserOption.Import) },
         )

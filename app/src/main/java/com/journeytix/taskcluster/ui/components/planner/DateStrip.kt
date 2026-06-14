@@ -8,13 +8,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,7 +73,7 @@ fun DateStrip(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // Calendar / jump-to-date button
@@ -120,51 +118,48 @@ fun DateStrip(
                 .background(HairlineStrong),
         )
 
-        // The scrollable week
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                start = 2.dp, top = 4.dp, bottom = 8.dp,
-            ),
+        // The full week — equal-weight cells so all seven days always fit on screen.
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 4.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            items(days, key = { it.key }) { day ->
-                if (day.isPlaceholder) {
-                    Spacer(modifier = Modifier.width(44.dp))
-                } else {
-                    val isToday = day.key == todayKey
-                    val isSelected = day.key == selectedKey
-                    val cellBg = when {
-                        isToday -> Primary
-                        isSelected -> Ink200
-                        else -> Color.Transparent
-                    }
-                    val numColor = if (isToday) PrimaryOn else Ink900
-                    Column(
+            days.forEach { day ->
+                val isToday = day.key == todayKey
+                val isSelected = day.key == selectedKey
+                val cellBg = when {
+                    isToday -> Primary
+                    isSelected -> Ink200
+                    else -> Color.Transparent
+                }
+                val numColor = if (isToday) PrimaryOn else Ink900
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { onSelect(day.key) }
+                        .padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = day.weekday,
+                        style = WeekdayStyle,
+                        color = if (isToday) Primary else Ink500,
+                        maxLines = 1,
+                    )
+                    Box(
                         modifier = Modifier
-                            .width(44.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { onSelect(day.key) }
-                            .padding(vertical = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(RadiusSm))
+                            .background(cellBg),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = day.weekday,
-                            style = WeekdayStyle,
-                            color = if (isToday) Primary else Ink500,
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(RadiusSm))
-                                .background(cellBg),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(text = day.date.toString(), style = DayNumberStyle, color = numColor)
-                        }
+                        Text(text = day.date.toString(), style = DayNumberStyle, color = numColor)
                     }
                 }
             }

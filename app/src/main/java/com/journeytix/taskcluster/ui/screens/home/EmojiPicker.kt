@@ -46,6 +46,7 @@ import com.journeytix.taskcluster.ui.theme.Red
 @Composable
 fun EmojiPicker(
     onSelect: (String?) -> Unit,
+    onAddImage: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     var selectedCategory by remember { mutableIntStateOf(0) }
@@ -121,6 +122,32 @@ fun EmojiPicker(
                 .background(Hairline),
         )
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Use a custom image instead of an emoji (transparent PNGs supported).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { onAddImage() }
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TaskIcon(TaskIcons.Image, null, size = 18.dp, tint = Ink900)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Add image",
+                style = TextStyle(
+                    fontFamily = GeneralSans,
+                    fontWeight = FontWeight.W400,
+                    fontSize = 15.sp,
+                ),
+                color = Ink900,
+            )
+        }
 
         Row(
             modifier = Modifier

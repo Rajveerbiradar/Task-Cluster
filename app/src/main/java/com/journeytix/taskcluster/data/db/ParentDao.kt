@@ -23,7 +23,7 @@ interface ParentDao {
     @Query("SELECT * FROM Parent WHERE id = :id")
     suspend fun getById(id: Long): Parent?
 
-    @Query("SELECT * FROM Parent WHERE isTrashed = 0 ORDER BY createdAt DESC")
+    @Query("SELECT * FROM Parent WHERE isTrashed = 0 ORDER BY createdAt ASC")
     fun observeAll(): Flow<List<Parent>>
 
     @Query("SELECT * FROM Parent WHERE isTrashed = 1 ORDER BY trashedAt DESC")

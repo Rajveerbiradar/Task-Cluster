@@ -23,7 +23,7 @@ interface SectionDao {
     @Query("SELECT * FROM Section WHERE id = :id")
     suspend fun getById(id: Long): Section?
 
-    @Query("SELECT * FROM Section WHERE isTrashed = 0 ORDER BY isDaily DESC, createdAt DESC")
+    @Query("SELECT * FROM Section WHERE isTrashed = 0 ORDER BY isDaily DESC, createdAt ASC")
     fun observeAll(): Flow<List<Section>>
 
     @Query("SELECT * FROM Section WHERE isTrashed = 1 ORDER BY trashedAt DESC")

@@ -2,11 +2,15 @@ package com.journeytix.taskcluster.ui.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.journeytix.taskcluster.data.export.TaskExporter
 import com.journeytix.taskcluster.data.model.Parent
+import com.journeytix.taskcluster.data.model.Priority
 import com.journeytix.taskcluster.data.model.Section
 import com.journeytix.taskcluster.data.model.Task
 import com.journeytix.taskcluster.data.repository.TaskRepository
+import com.journeytix.taskcluster.ui.components.core.SectionIcons
 import com.journeytix.taskcluster.ui.components.planner.TimePillStatus
+import java.time.Instant
 import java.time.LocalDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +21,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 enum class HomePage { Home, Tasks }
+
+/* How to resolve an imported parent whose title already exists. */
+enum class ImportStrategy { Default, Rename, Replace, Skip }
 
 data class SectionWithTasks(
     val section: Section,
@@ -54,7 +61,7 @@ sealed interface HomeIntent {
     data class ToggleTask(val task: Task, val checked: Boolean) : HomeIntent
     data class ToggleSection(val id: Long) : HomeIntent
     data class ToggleParent(val id: Long) : HomeIntent
-    data class RevealTask(val parentId: Long?, val sectionId: Long) : HomeIntent
+    data class RevealTask(val parentId: Long?, val sectionId: Long?) : HomeIntent
     data class AddTask(
         val sectionId: Long,
         val title: String,
@@ -66,6 +73,21 @@ sealed interface HomeIntent {
     // Creation
     data class CreateParent(val title: String, val emoji: String?, val scheduledDate: String?) : HomeIntent
     data class CreateSection(val title: String, val parentId: Long?, val iconKey: String?, val scheduledDate: String?, val isDaily: Boolean = false) : HomeIntent
+    data class Import(
+        val data: TaskExporter.ImportData,
+        val strategy: ImportStrategy = ImportStrategy.Default,
+    ) : HomeIntent
+    // Scoped import: drop the file's sections under one parent (or daily), or its
+    // tasks under one section — instead of creating new top-level items.
+    data class ImportSectionsInto(
+        val parentId: Long?,
+        val isDaily: Boolean,
+        val data: TaskExporter.ImportData,
+    ) : HomeIntent
+    data class ImportTasksInto(
+        val sectionId: Long,
+        val data: TaskExporter.ImportData,
+    ) : HomeIntent
 
     // Parent actions
     data class AddSectionToParent(val parentId: Long) : HomeIntent
@@ -170,10 +192,11 @@ class HomeViewModel(
                 it.copy(expandedParents = it.expandedParents.toggled(intent.id))
             }
             is HomeIntent.RevealTask -> localUi.update {
+                val sid = intent.sectionId
                 it.copy(
-                    dailyExpanded = if (intent.parentId == null && state.value.daily.any { s -> s.section.id == intent.sectionId }) true else it.dailyExpanded,
-                    expandedParents = if (intent.parentId != null) it.expandedParents + intent.parentId else it.expandedParents,
-                    expandedSections = it.expandedSections + intent.sectionId,
+                    dailyExpanded = if (intent.parentId == null && sid != null && state.value.daily.any { s -> s.section.id == sid }) true else it.dailyExpanded,
+                    expandedParents = intent.parentId?.let { pid -> it.expandedParents + pid } ?: it.expandedParents,
+                    expandedSections = sid?.let { s -> it.expandedSections + s } ?: it.expandedSections,
                 )
             }
             is HomeIntent.ToggleTask -> {
@@ -205,6 +228,36 @@ class HomeViewModel(
             }
             is HomeIntent.CreateSection -> viewModelScope.launch {
                 repository.addSection(Section(title = intent.title, parentId = intent.parentId, iconKey = intent.iconKey, scheduledDate = intent.scheduledDate, isDaily = intent.isDaily))
+            }
+            is HomeIntent.Import -> viewModelScope.launch {
+                val existing = state.value.parents.map { it.parent }
+                val usedTitles = existing.map { it.title }.toMutableList()
+                intent.data.parents
+                    .filter { it.title.trim().lowercase() != "daily" } // "daily" is reserved
+                    .forEach { p ->
+                        val title = p.title.trim().take(80)
+                        val dup = existing.firstOrNull { it.title.equals(title, ignoreCase = true) }
+                        when {
+                            dup == null -> insertImportedParent(p, title, usedTitles)
+                            intent.strategy == ImportStrategy.Skip -> Unit
+                            intent.strategy == ImportStrategy.Replace -> {
+                                repository.deleteParentPermanently(dup.id)
+                                insertImportedParent(p, title, usedTitles)
+                            }
+                            else -> insertImportedParent(p, uniqueTitle(title, usedTitles), usedTitles)
+                        }
+                    }
+                intent.data.standaloneSections.forEach { insertImportedSection(it, null) }
+            }
+            is HomeIntent.ImportSectionsInto -> viewModelScope.launch {
+                val sections = intent.data.standaloneSections +
+                    intent.data.parents.flatMap { it.sections }
+                sections.forEach { insertImportedSection(it, intent.parentId, intent.isDaily) }
+            }
+            is HomeIntent.ImportTasksInto -> viewModelScope.launch {
+                val tasks = (intent.data.standaloneSections + intent.data.parents.flatMap { it.sections })
+                    .flatMap { it.tasks }
+                tasks.forEach { insertImportedTask(it, intent.sectionId) }
             }
             is HomeIntent.AddSectionToParent -> viewModelScope.launch {
                 repository.addSection(Section(title = "new section", parentId = intent.parentId))
@@ -247,6 +300,61 @@ class HomeViewModel(
 
     private fun Set<Long>.toggled(id: Long): Set<Long> =
         if (id in this) this - id else this + id
+
+    // Imported parents are never auto-pinned — the user pins from the menu.
+    private suspend fun insertImportedParent(
+        p: TaskExporter.ImportParent,
+        title: String,
+        usedTitles: MutableList<String>,
+    ) {
+        usedTitles.add(title)
+        val parentId = repository.addParent(
+            Parent(title = title, emoji = p.emoji, isFavourite = false)
+        )
+        p.sections.forEach { insertImportedSection(it, parentId) }
+    }
+
+    private fun uniqueTitle(base: String, used: List<String>): String {
+        if (used.none { it.equals(base, ignoreCase = true) }) return base
+        var n = 2
+        while (used.any { it.equals("$base ($n)", ignoreCase = true) }) n++
+        return "$base ($n)".take(80)
+    }
+
+    private suspend fun insertImportedSection(
+        s: TaskExporter.ImportSection,
+        parentId: Long?,
+        isDaily: Boolean = false,
+    ) {
+        val iconKey = s.icon?.takeIf { SectionIcons.resId(it) != null } // unknown icon -> default
+        val sectionId = repository.addSection(
+            Section(title = s.title.trim().take(80), parentId = parentId, iconKey = iconKey, isDaily = isDaily)
+        )
+        s.tasks.forEach { insertImportedTask(it, sectionId) }
+    }
+
+    private suspend fun insertImportedTask(t: TaskExporter.ImportTask, sectionId: Long) {
+        val due = t.due?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+        repository.addTask(
+            Task(
+                sectionId = sectionId,
+                title = t.title.trim().take(200),
+                description = t.description,
+                isCompleted = t.completed,
+                completedAt = if (t.completed) System.currentTimeMillis() else null,
+                priority = parseImportPriority(t.priority),
+                dueDate = due,
+                dueTime = due,
+            )
+        )
+    }
+
+    private fun parseImportPriority(p: String?): Priority = when (p?.lowercase()) {
+        "low" -> Priority.LOW
+        "medium" -> Priority.MEDIUM
+        "high" -> Priority.HIGH
+        else -> Priority.NONE
+    }
 }
 
 /* --- Time pill derivation ---

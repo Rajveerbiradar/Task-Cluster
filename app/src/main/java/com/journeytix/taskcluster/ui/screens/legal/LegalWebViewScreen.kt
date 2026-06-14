@@ -1,23 +1,52 @@
 package com.journeytix.taskcluster.ui.screens.legal
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.journeytix.taskcluster.ui.theme.Canvas
-import com.journeytix.taskcluster.ui.theme.Ink900
-import com.journeytix.taskcluster.ui.theme.Title
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.journeytix.taskcluster.ui.components.core.Page
+import com.journeytix.taskcluster.ui.theme.GeneralSans
+import com.journeytix.taskcluster.ui.theme.Ink500
+import com.journeytix.taskcluster.ui.theme.Ink700
 
-// Placeholder — replaced in Goal 14.
+/* Legal page — a normal in-app page (back chevron + title + scrollable text).
+   No WebView: the body is plain text with the canonical address shown as
+   selectable text. Swap in the full policy text here if it gets bundled. */
 @Composable
 fun LegalWebViewScreen(
     title: String,
     url: String,
     onBack: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize().background(Canvas)) {
-        Text(text = title, style = Title, color = Ink900)
+    Page(title = title, onBack = onBack) {
+        Text(
+            text = "Read the full $title for TaskCluster at the address below.",
+            style = TextStyle(
+                fontFamily = GeneralSans,
+                fontWeight = FontWeight.W400,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+            ),
+            color = Ink700,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        SelectionContainer {
+            Text(
+                text = url,
+                style = TextStyle(
+                    fontFamily = GeneralSans,
+                    fontWeight = FontWeight.W400,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                ),
+                color = Ink500,
+            )
+        }
     }
 }

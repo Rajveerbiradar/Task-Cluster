@@ -1,5 +1,8 @@
 package com.journeytix.taskcluster.ui.screens.home
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.testTag
@@ -32,6 +37,8 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.journeytix.taskcluster.data.export.TaskExporter
+import com.journeytix.taskcluster.data.image.ParentImage
 import com.journeytix.taskcluster.data.model.Parent
 import com.journeytix.taskcluster.ui.components.core.SectionIcons
 import com.journeytix.taskcluster.ui.components.core.TaskIconButton
@@ -68,22 +75,63 @@ private const val DAILY_PARENT_ID = -1L
 // Highlighted task id for the search "reveal & blink" flow (null = none).
 private val LocalBlinkTaskId = androidx.compose.runtime.compositionLocalOf<Long?> { null }
 
+// Which entity to scroll into view, e.g. "task:12" / "section:4" / "parent:7".
+private val LocalRevealKey = androidx.compose.runtime.compositionLocalOf<String?> { null }
+
+// Centers a target in the scroll viewport: (targetTopInRoot, targetHeightPx).
+private val LocalRevealScroll = androidx.compose.runtime.compositionLocalOf<(Float, Int) -> Unit> { { _, _ -> } }
+
+/* A top-level row — either a parent or a standalone section — so the two can be
+   interleaved in pure created/imported order instead of all parents then all
+   sections. */
+/* Where an import should land. null = global (new top-level items). */
+private sealed interface ImportScope {
+    data class IntoParent(val parentId: Long?, val isDaily: Boolean) : ImportScope
+    data class IntoSection(val sectionId: Long) : ImportScope
+}
+
+private sealed interface TopLevelEntry {
+    val createdAt: Long
+    data class ParentEntry(val data: ParentWithSections) : TopLevelEntry {
+        override val createdAt get() = data.parent.createdAt
+    }
+    data class SectionEntry(val data: SectionWithTasks) : TopLevelEntry {
+        override val createdAt get() = data.section.createdAt
+    }
+}
+
+/* When [isTarget] is the searched entity, measure it and center it in the scroll
+   viewport (after a short settle for expand animations). */
+@Composable
+private fun revealModifier(isTarget: Boolean): Modifier {
+    val scroll = LocalRevealScroll.current
+    var top by remember { mutableStateOf(0f) }
+    var heightPx by remember { mutableStateOf(0) }
+    LaunchedEffect(isTarget, heightPx) {
+        if (isTarget && heightPx > 0) {
+            kotlinx.coroutines.delay(300) // let expand/collapse settle
+            scroll(top, heightPx)
+        }
+    }
+    return Modifier.onGloballyPositioned { c ->
+        top = c.positionInRoot().y
+        heightPx = c.size.height
+    }
+}
+
 // Opens the full-detail dialog for a tapped task (titles/descriptions truncate in the row).
 private val LocalOpenTask = androidx.compose.runtime.compositionLocalOf<(com.journeytix.taskcluster.data.model.Task) -> Unit> { {} }
 
 private fun weekOf(date: LocalDate): List<DateStripDay> {
     val monday = date.minusDays((date.dayOfWeek.value - 1).toLong())
+    // Always seven real days (Mon–Sun), even when the week spans two months.
     return (0..6).map { i ->
         val day = monday.plusDays(i.toLong())
-        if (day.month != date.month) {
-            DateStripDay(key = "p$i", weekday = "", date = 0, isPlaceholder = true)
-        } else {
-            DateStripDay(
-                key = day.toString(),
-                weekday = day.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH),
-                date = day.dayOfMonth,
-            )
-        }
+        DateStripDay(
+            key = day.toString(),
+            weekday = day.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH),
+            date = day.dayOfMonth,
+        )
     }
 }
 
@@ -111,7 +159,12 @@ fun HomeScreen(
     var renameSectionId by remember { mutableStateOf<Long?>(null) }
     var renameInitialTitle by remember { mutableStateOf("") }
     var addTaskSectionId by remember { mutableStateOf<Long?>(null) }
-    var showImportPicker by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var showImport by remember { mutableStateOf(false) }
+    var importConflict by remember { mutableStateOf<TaskExporter.ImportData?>(null) }
+    var showAddMethod by remember { mutableStateOf(false) }
+    var pendingManualAdd by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var importScope by remember { mutableStateOf<ImportScope?>(null) }
     var showCalendar by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var taskMenuAnchor by remember { mutableStateOf<IntOffset?>(null) }
@@ -121,6 +174,14 @@ fun HomeScreen(
     var blinkTaskId by remember { mutableStateOf<Long?>(null) }
     var blinkVisible by remember { mutableStateOf(false) }
     var detailTask by remember { mutableStateOf<com.journeytix.taskcluster.data.model.Task?>(null) }
+    var showDownloadSkill by remember { mutableStateOf(false) }
+
+    // Scroll + reveal plumbing.
+    val scrollState = rememberScrollState()
+    val revealScope = androidx.compose.runtime.rememberCoroutineScope()
+    var columnTopPx by remember { mutableStateOf(0f) }
+    var viewportPx by remember { mutableStateOf(0) }
+    var revealKey by remember { mutableStateOf<String?>(null) }
 
     // Blink the revealed task twice, then clear.
     LaunchedEffect(blinkTaskId) {
@@ -134,9 +195,52 @@ fun HomeScreen(
             blinkTaskId = null
         }
     }
+    // Clear the reveal key once the scroll has had time to happen (so re-searching
+    // the same item triggers it again).
+    LaunchedEffect(revealKey) {
+        if (revealKey != null) {
+            kotlinx.coroutines.delay(1500)
+            revealKey = null
+        }
+    }
+
+    // Custom parent image: pick → resize/compress (PNG, keeps transparency) → store
+    // in the parent's emoji slot as "img:<path>".
+    var imagePickTarget by remember { mutableStateOf<Long?>(null) }
+    val imageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        val target = imagePickTarget
+        imagePickTarget = null
+        if (uri != null && target != null) {
+            revealScope.launch {
+                val value = ParentImage.importAndCompress(context, uri)
+                if (value != null) {
+                    val old = if (target == DAILY_PARENT_ID) state.dailyEmoji
+                        else state.parents.firstOrNull { it.parent.id == target }?.parent?.emoji
+                    ParentImage.deleteIfImage(old)
+                    if (target == DAILY_PARENT_ID) viewModel.onIntent(HomeIntent.SetDailyEmoji(value))
+                    else viewModel.onIntent(HomeIntent.SetParentEmoji(target, value))
+                } else {
+                    Toast.makeText(context, "Couldn't load that image", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    val revealScroll: (Float, Int) -> Unit = { rowTop, rowH ->
+        revealScope.launch {
+            val target = (scrollState.value + (rowTop - columnTopPx) - viewportPx / 2f + rowH / 2f)
+                .toInt()
+                .coerceIn(0, scrollState.maxValue)
+            scrollState.animateScrollTo(target)
+        }
+    }
 
     androidx.compose.runtime.CompositionLocalProvider(
         LocalBlinkTaskId provides blinkTaskId.takeIf { blinkVisible },
+        LocalRevealKey provides revealKey,
+        LocalRevealScroll provides revealScroll,
         LocalOpenTask provides { task -> detailTask = task },
     ) {
     Box(
@@ -148,11 +252,15 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .onGloballyPositioned {
+                    columnTopPx = it.positionInRoot().y
+                    viewportPx = it.size.height
+                }
+                .verticalScroll(scrollState)
                 .padding(horizontal = Gutter)
                 .widthIn(max = ScreenMax)
                 .align(Alignment.TopCenter)
-                .padding(top = 26.dp, bottom = 140.dp),
+                .padding(top = 26.dp, bottom = 220.dp),
         ) {
             // Header
             Row(
@@ -255,24 +363,32 @@ fun HomeScreen(
                         ) }
                     }
                     // On a future date, show everything scheduled for that day (not just
-                    // favourites) so items added while planning are visible.
+                    // favourites) so items added while planning are visible. Parents and
+                    // standalone sections interleave in created order.
                     val favourites = state.parents.filter { it.parent.isFavourite }
                     val parentsToShow = if (state.isPlanning) state.parents else favourites
-                    parentsToShow.forEach { ParentBlock(
-                        it.parent, it.sections, viewModel, now,
-                        onMenu = { p, anchor -> menuParent = p; parentMenuAnchor = anchor },
-                        onEmojiClick = { pId, anchor -> emojiTarget = pId to anchor },
-                        onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
-                        onIconClick = { sId, anchor -> iconTarget = sId to anchor },
-                        onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
-                    ) }
-                    if (state.isPlanning) {
-                        state.standalone.forEach { SectionBlock(
-                            it, viewModel, now,
-                            onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
-                            onIconClick = { sId, anchor -> iconTarget = sId to anchor },
-                            onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
-                        ) }
+                    val homeEntries = (
+                        parentsToShow.map { TopLevelEntry.ParentEntry(it) } +
+                            (if (state.isPlanning) state.standalone else emptyList())
+                                .map { TopLevelEntry.SectionEntry(it) }
+                        ).sortedBy { it.createdAt }
+                    homeEntries.forEach { entry ->
+                        when (entry) {
+                            is TopLevelEntry.ParentEntry -> ParentBlock(
+                                entry.data.parent, entry.data.sections, viewModel, now,
+                                onMenu = { p, anchor -> menuParent = p; parentMenuAnchor = anchor },
+                                onEmojiClick = { pId, anchor -> emojiTarget = pId to anchor },
+                                onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
+                                onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                                onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
+                            )
+                            is TopLevelEntry.SectionEntry -> SectionBlock(
+                                entry.data, viewModel, now,
+                                onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
+                                onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                                onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
+                            )
+                        }
                     }
                     val planningEmpty = state.isPlanning &&
                         parentsToShow.isEmpty() && state.standalone.isEmpty()
@@ -301,20 +417,29 @@ fun HomeScreen(
                     modifier = Modifier.padding(top = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(Space3),
                 ) {
-                    state.parents.forEach { ParentBlock(
-                        it.parent, it.sections, viewModel, now,
-                        onMenu = { p, anchor -> menuParent = p; parentMenuAnchor = anchor },
-                        onEmojiClick = { pId, anchor -> emojiTarget = pId to anchor },
-                        onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
-                        onIconClick = { sId, anchor -> iconTarget = sId to anchor },
-                        onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
-                    ) }
-                    state.standalone.forEach { SectionBlock(
-                        it, viewModel, now,
-                        onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
-                        onIconClick = { sId, anchor -> iconTarget = sId to anchor },
-                        onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
-                    ) }
+                    // Parents and standalone sections interleave in created/imported order.
+                    val entries = (
+                        state.parents.map { TopLevelEntry.ParentEntry(it) } +
+                            state.standalone.map { TopLevelEntry.SectionEntry(it) }
+                        ).sortedBy { it.createdAt }
+                    entries.forEach { entry ->
+                        when (entry) {
+                            is TopLevelEntry.ParentEntry -> ParentBlock(
+                                entry.data.parent, entry.data.sections, viewModel, now,
+                                onMenu = { p, anchor -> menuParent = p; parentMenuAnchor = anchor },
+                                onEmojiClick = { pId, anchor -> emojiTarget = pId to anchor },
+                                onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
+                                onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                                onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
+                            )
+                            is TopLevelEntry.SectionEntry -> SectionBlock(
+                                entry.data, viewModel, now,
+                                onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
+                                onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                                onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -342,7 +467,7 @@ fun HomeScreen(
                 ContextMenuItem(label = "Settings", icon = TaskIcons.Settings, onClick = onOpenSettings),
                 ContextMenuItem(label = "Trash", icon = TaskIcons.Trash, onClick = onOpenTrash),
                 ContextMenuItem(label = "About", icon = TaskIcons.Info, onClick = onOpenAbout),
-                ContextMenuItem(label = "Export", icon = TaskIcons.Import, onClick = { /* export sheet — TODO */ }),
+                ContextMenuItem(label = "Download SKILL", icon = TaskIcons.Import, onClick = { showDownloadSkill = true }),
             ),
         )
 
@@ -353,8 +478,9 @@ fun HomeScreen(
             items = menuParent?.let { p ->
                 listOf(
                     ContextMenuItem(label = "Add section", icon = TaskIcons.Plus, onClick = {
-                        nameFormParentId = p.id
-                        showNameForm = NameFormMode.Section
+                        pendingManualAdd = { nameFormParentId = p.id; showNameForm = NameFormMode.Section }
+                        importScope = ImportScope.IntoParent(p.id, isDaily = false)
+                        showAddMethod = true
                     }),
                     ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = {
                         renameParentId = p.id
@@ -382,29 +508,29 @@ fun HomeScreen(
             anchor = sectionMenuAnchor ?: IntOffset.Zero,
             onClose = { sectionMenuAnchor = null },
             items = menuSectionId?.let { sId ->
-                val isDaily = state.daily.any { it.section.id == sId }
                 val sectionTitle = state.daily.find { it.section.id == sId }?.section?.title
                     ?: state.parents.flatMap { it.sections }.find { it.section.id == sId }?.section?.title
                     ?: state.standalone.find { it.section.id == sId }?.section?.title
                     ?: ""
-                buildList {
-                    add(ContextMenuItem(label = "Add task", icon = TaskIcons.Plus, onClick = {
-                        addTaskSectionId = sId
-                    }))
-                    add(ContextMenuItem(label = "Icon", icon = TaskIcons.Image, onClick = {
+                listOf(
+                    ContextMenuItem(label = "Add task", icon = TaskIcons.Plus, onClick = {
+                        pendingManualAdd = { addTaskSectionId = sId }
+                        importScope = ImportScope.IntoSection(sId)
+                        showAddMethod = true
+                    }),
+                    ContextMenuItem(label = "Icon", icon = TaskIcons.Image, onClick = {
                         iconTarget = sId to (sectionMenuAnchor ?: IntOffset.Zero)
-                    }))
-                    add(ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = {
+                    }),
+                    ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = {
                         renameSectionId = sId
                         renameInitialTitle = sectionTitle
                         showNameForm = NameFormMode.RenameSection
-                    }))
-                    if (!isDaily) {
-                        add(ContextMenuItem(label = "Delete", icon = TaskIcons.Trash, danger = true, onClick = {
-                            viewModel.onIntent(HomeIntent.DeleteSection(sId))
-                        }))
-                    }
-                }
+                    }),
+                    // Daily's sections are deletable even though the daily parent isn't.
+                    ContextMenuItem(label = "Delete", icon = TaskIcons.Trash, danger = true, onClick = {
+                        viewModel.onIntent(HomeIntent.DeleteSection(sId))
+                    }),
+                )
             } ?: emptyList(),
         )
 
@@ -434,9 +560,13 @@ fun HomeScreen(
             onClose = { dailyMenuAnchor = null },
             items = listOf(
                 ContextMenuItem(label = "Add section", icon = TaskIcons.Plus, onClick = {
-                    creatingDailySection = true
-                    nameFormParentId = null
-                    showNameForm = NameFormMode.Section
+                    pendingManualAdd = {
+                        creatingDailySection = true
+                        nameFormParentId = null
+                        showNameForm = NameFormMode.Section
+                    }
+                    importScope = ImportScope.IntoParent(parentId = null, isDaily = true)
+                    showAddMethod = true
                 }),
                 ContextMenuItem(label = "Emoji", icon = TaskIcons.Smile, onClick = {
                     emojiTarget = DAILY_PARENT_ID to (dailyMenuAnchor ?: IntOffset.Zero)
@@ -455,10 +585,87 @@ fun HomeScreen(
                             nameFormParentId = null
                             showNameForm = NameFormMode.Section
                         }
-                        AddChooserOption.Import -> { showImportPicker = true }
+                        AddChooserOption.Import -> { importScope = null; showImport = true }
                     }
                 },
                 onDismiss = { showAddChooser = false },
+            )
+        }
+
+        // Add-method chooser — manual entry, or import (file/paste).
+        if (showAddMethod) {
+            AddMethodChooser(
+                onManual = {
+                    val action = pendingManualAdd
+                    showAddMethod = false
+                    pendingManualAdd = null
+                    importScope = null // manual entry isn't an import
+                    action?.invoke()
+                },
+                onImport = {
+                    showAddMethod = false
+                    pendingManualAdd = null
+                    showImport = true // keep importScope so the import lands in the right place
+                },
+                onDismiss = {
+                    showAddMethod = false
+                    pendingManualAdd = null
+                    importScope = null
+                },
+            )
+        }
+
+        // Import overlay — paste JSON or pick a .txt file. The scope decides whether
+        // it creates new top-level items or lands inside a parent/section.
+        if (showImport) {
+            ImportSheet(
+                onImport = { raw ->
+                    val data = runCatching { TaskExporter.parse(raw) }.getOrNull()
+                    if (data != null && (data.parents.isNotEmpty() || data.standaloneSections.isNotEmpty())) {
+                        when (val scope = importScope) {
+                            is ImportScope.IntoSection -> {
+                                viewModel.onIntent(HomeIntent.ImportTasksInto(scope.sectionId, data))
+                                Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                            }
+                            is ImportScope.IntoParent -> {
+                                viewModel.onIntent(HomeIntent.ImportSectionsInto(scope.parentId, scope.isDaily, data))
+                                Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                            }
+                            null -> {
+                                val dupes = data.parents
+                                    .map { it.title.trim() }
+                                    .filter { t -> state.parents.any { it.parent.title.equals(t, ignoreCase = true) } }
+                                if (dupes.isEmpty()) {
+                                    viewModel.onIntent(HomeIntent.Import(data))
+                                    Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    importConflict = data // resolve via dialog
+                                }
+                            }
+                        }
+                    } else {
+                        Toast.makeText(context, "Couldn't read that — check the JSON", Toast.LENGTH_SHORT).show()
+                    }
+                    showImport = false
+                    if (importConflict == null) importScope = null
+                },
+                onDismiss = { showImport = false; importScope = null },
+            )
+        }
+
+        // Duplicate-parent resolution for an import.
+        importConflict?.let { data ->
+            val dupes = data.parents
+                .map { it.title.trim() }
+                .filter { t -> state.parents.any { it.parent.title.equals(t, ignoreCase = true) } }
+            ImportConflictDialog(
+                duplicateTitles = dupes,
+                onResolve = { strategy ->
+                    viewModel.onIntent(HomeIntent.Import(data, strategy))
+                    Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
+                    importConflict = null
+                },
+                onDismiss = { importConflict = null },
             )
         }
 
@@ -527,12 +734,21 @@ fun HomeScreen(
         emojiTarget?.let { (parentId, _) ->
             EmojiPicker(
                 onSelect = { emoji ->
+                    // Replacing/removing an existing custom image — drop its file.
+                    val old = if (parentId == DAILY_PARENT_ID) state.dailyEmoji
+                        else state.parents.firstOrNull { it.parent.id == parentId }?.parent?.emoji
+                    ParentImage.deleteIfImage(old)
                     if (parentId == DAILY_PARENT_ID) {
                         viewModel.onIntent(HomeIntent.SetDailyEmoji(emoji))
                     } else {
                         viewModel.onIntent(HomeIntent.SetParentEmoji(parentId, emoji))
                     }
                     emojiTarget = null
+                },
+                onAddImage = {
+                    imagePickTarget = parentId
+                    emojiTarget = null
+                    imageLauncher.launch("image/*")
                 },
                 onDismiss = { emojiTarget = null },
             )
@@ -549,31 +765,69 @@ fun HomeScreen(
             )
         }
 
-        // SearchOverlay
+        // SearchOverlay — tasks, sections, and parents are all searchable.
         if (showSearch) {
-            val allTasks = remember(state) {
-                val list = mutableListOf<Pair<com.journeytix.taskcluster.data.model.Task, String>>()
-                state.daily.forEach { s -> s.tasks.forEach { t -> list.add(t to "Daily · ${s.section.title}") } }
-                state.parents.forEach { p -> p.sections.forEach { s -> s.tasks.forEach { t -> list.add(t to "${p.parent.title} · ${s.section.title}") } } }
-                state.standalone.forEach { s -> s.tasks.forEach { t -> list.add(t to s.section.title) } }
-                list
+            val searchItems = remember(state) {
+                buildList {
+                    // Tasks
+                    state.daily.forEach { s -> s.tasks.forEach { t ->
+                        val (st, tm) = timePillFor(t, now)
+                        add(SearchItem("task:${t.id}", t.title, "Daily · ${s.section.title}", "${t.title} ${t.description}", st, tm))
+                    } }
+                    state.parents.forEach { p -> p.sections.forEach { s -> s.tasks.forEach { t ->
+                        val (st, tm) = timePillFor(t, now)
+                        add(SearchItem("task:${t.id}", t.title, "${p.parent.title} · ${s.section.title}", "${t.title} ${t.description}", st, tm))
+                    } } }
+                    state.standalone.forEach { s -> s.tasks.forEach { t ->
+                        val (st, tm) = timePillFor(t, now)
+                        add(SearchItem("task:${t.id}", t.title, s.section.title, "${t.title} ${t.description}", st, tm))
+                    } }
+                    // Sections
+                    state.daily.forEach { s -> add(SearchItem("section:${s.section.id}", s.section.title, "Section · Daily", s.section.title)) }
+                    state.parents.forEach { p -> p.sections.forEach { s -> add(SearchItem("section:${s.section.id}", s.section.title, "Section · ${p.parent.title}", s.section.title)) } }
+                    state.standalone.forEach { s -> add(SearchItem("section:${s.section.id}", s.section.title, "Section · standalone", s.section.title)) }
+                    // Parents
+                    state.parents.forEach { p -> add(SearchItem("parent:${p.parent.id}", p.parent.title, "Parent", p.parent.title)) }
+                }
             }
             SearchOverlay(
-                allTasks = allTasks,
+                items = searchItems,
                 onDismiss = { showSearch = false },
-                onTaskClick = { task ->
+                onSelect = { item ->
                     showSearch = false
-                    // Find which section/parent holds the task, then reveal + blink it.
-                    val parentId = state.parents.firstOrNull { p ->
-                        p.sections.any { s -> s.tasks.any { it.id == task.id } }
-                    }?.parent?.id
-                    viewModel.onIntent(HomeIntent.RevealTask(parentId, task.sectionId))
-                    if (state.page != HomePage.Home && parentId == null &&
-                        state.daily.any { it.section.id == task.sectionId }
-                    ) {
-                        viewModel.onIntent(HomeIntent.SetPage(HomePage.Home))
+                    val parts = item.id.split(":")
+                    val kind = parts[0]
+                    val id = parts.getOrNull(1)?.toLongOrNull()
+                    when (kind) {
+                        "task" -> if (id != null) {
+                            val isDaily = state.daily.any { s -> s.tasks.any { it.id == id } }
+                            val sectionId = (state.daily + state.standalone +
+                                state.parents.flatMap { it.sections })
+                                .firstOrNull { s -> s.tasks.any { it.id == id } }?.section?.id
+                            val parentId = state.parents.firstOrNull { p ->
+                                p.sections.any { s -> s.tasks.any { it.id == id } }
+                            }?.parent?.id
+                            viewModel.onIntent(HomeIntent.SetPage(if (isDaily) HomePage.Home else HomePage.Tasks))
+                            viewModel.onIntent(HomeIntent.RevealTask(parentId, sectionId))
+                            revealKey = "task:$id"
+                            blinkTaskId = id
+                        }
+                        "section" -> if (id != null) {
+                            val isDaily = state.daily.any { it.section.id == id }
+                            val parentId = state.parents.firstOrNull { p ->
+                                p.sections.any { it.section.id == id }
+                            }?.parent?.id
+                            viewModel.onIntent(HomeIntent.SetPage(if (isDaily) HomePage.Home else HomePage.Tasks))
+                            viewModel.onIntent(HomeIntent.RevealTask(parentId, id))
+                            revealKey = "section:$id"
+                        }
+                        "parent" -> if (id != null) {
+                            val isFav = state.parents.firstOrNull { it.parent.id == id }?.parent?.isFavourite == true
+                            viewModel.onIntent(HomeIntent.SetPage(if (isFav) HomePage.Home else HomePage.Tasks))
+                            viewModel.onIntent(HomeIntent.RevealTask(id, null))
+                            revealKey = "parent:$id"
+                        }
                     }
-                    blinkTaskId = task.id
                 },
             )
         }
@@ -598,6 +852,11 @@ fun HomeScreen(
                 now = now,
                 onDismiss = { detailTask = null },
             )
+        }
+
+        // Download SKILL — instructions an AI uses to write an import file.
+        if (showDownloadSkill) {
+            DownloadSkillSheet(onDismiss = { showDownloadSkill = false })
         }
     }
     }
@@ -664,6 +923,7 @@ private fun ParentBlock(
         emoji = parent.emoji,
         status = parentStatus,
         time = parentTime,
+        modifier = revealModifier(LocalRevealKey.current == "parent:${parent.id}"),
         onMenu = { anchor -> onMenu(parent, anchor) },
         onEmojiClick = { anchor -> onEmojiClick(parent.id, anchor) },
     ) {
@@ -708,6 +968,7 @@ private fun SectionBlock(
         status = sectionStatus,
         time = sectionTime,
         pinned = section.isDaily,
+        modifier = revealModifier(LocalRevealKey.current == "section:${section.id}"),
         onMenu = if (onSectionMenu != null) { { anchor -> onSectionMenu(section.id, anchor) } } else null,
         onIconClick = if (onIconClick != null) { { anchor -> onIconClick(section.id, anchor) } } else null,
     ) {
@@ -724,6 +985,17 @@ private fun SectionBlock(
                 modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
             )
         } else {
+            Text(
+                text = "Tap a task to see its full detail.",
+                style = TextStyle(
+                    fontFamily = GeneralSans,
+                    fontWeight = FontWeight.W400,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                ),
+                color = Ink400,
+                modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
+            )
             sectionWithTasks.tasks.forEachIndexed { index, task ->
                 val (status, time) = timePillFor(task, now)
                 TaskRow(
@@ -734,6 +1006,7 @@ private fun SectionBlock(
                     time = time,
                     divider = index > 0,
                     highlighted = task.id == LocalBlinkTaskId.current,
+                    modifier = revealModifier(LocalRevealKey.current == "task:${task.id}"),
                     onClick = { openTask(task) },
                     onToggle = { checked ->
                         viewModel.onIntent(HomeIntent.ToggleTask(task, checked))
