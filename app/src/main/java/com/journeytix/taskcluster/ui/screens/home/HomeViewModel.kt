@@ -63,8 +63,8 @@ sealed interface HomeIntent {
     ) : HomeIntent
 
     // Creation
-    data class CreateParent(val title: String, val emoji: String?) : HomeIntent
-    data class CreateSection(val title: String, val parentId: Long?, val iconKey: String?) : HomeIntent
+    data class CreateParent(val title: String, val emoji: String?, val scheduledDate: String?) : HomeIntent
+    data class CreateSection(val title: String, val parentId: Long?, val iconKey: String?, val scheduledDate: String?) : HomeIntent
 
     // Parent actions
     data class AddSectionToParent(val parentId: Long) : HomeIntent
@@ -119,24 +119,32 @@ class HomeViewModel(
         localUi,
         userPreferences.settings,
     ) { sections, tasks, parents, local, settings ->
+        val selectedDateStr = local.selected.toString()
         val tasksBySection = tasks.groupBy { it.sectionId }
         fun withTasks(section: Section) =
             SectionWithTasks(section, tasksBySection[section.id].orEmpty())
+
+        // Filter by date: show if scheduledDate is null (always visible) or matches selected date
+        fun Section.matchesDate() = scheduledDate == null || scheduledDate == selectedDateStr
+        fun Parent.matchesDate() = scheduledDate == null || scheduledDate == selectedDateStr
+
+        val filteredSections = sections.filter { it.matchesDate() }
+        val filteredParents = parents.filter { it.matchesDate() }
 
         HomeUiState(
             today = today,
             selected = local.selected,
             page = local.page,
-            daily = sections.filter { it.isDaily }.map(::withTasks),
-            parents = parents.map { parent ->
+            daily = filteredSections.filter { it.isDaily }.map(::withTasks),
+            parents = filteredParents.map { parent ->
                 ParentWithSections(
                     parent = parent,
-                    sections = sections
+                    sections = filteredSections
                         .filter { !it.isDaily && it.parentId == parent.id }
                         .map(::withTasks),
                 )
             },
-            standalone = sections
+            standalone = filteredSections
                 .filter { !it.isDaily && it.parentId == null }
                 .map(::withTasks),
             expandedSections = local.expandedSections,
@@ -185,10 +193,10 @@ class HomeViewModel(
                 }
             }
             is HomeIntent.CreateParent -> viewModelScope.launch {
-                repository.addParent(Parent(title = intent.title, emoji = intent.emoji))
+                repository.addParent(Parent(title = intent.title, emoji = intent.emoji, scheduledDate = intent.scheduledDate))
             }
             is HomeIntent.CreateSection -> viewModelScope.launch {
-                repository.addSection(Section(title = intent.title, parentId = intent.parentId, iconKey = intent.iconKey))
+                repository.addSection(Section(title = intent.title, parentId = intent.parentId, iconKey = intent.iconKey, scheduledDate = intent.scheduledDate))
             }
             is HomeIntent.AddSectionToParent -> viewModelScope.launch {
                 repository.addSection(Section(title = "new section", parentId = intent.parentId))

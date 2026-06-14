@@ -30,7 +30,7 @@ import com.journeytix.taskcluster.ui.theme.Ink400
 import com.journeytix.taskcluster.ui.theme.Ink900
 import com.journeytix.taskcluster.ui.theme.SurfaceSunken
 
-enum class NameFormMode { Parent, Section }
+enum class NameFormMode { Parent, Section, RenameParent, RenameSection }
 
 @Composable
 fun NameForm(
@@ -46,9 +46,22 @@ fun NameForm(
         focusRequester.requestFocus()
     }
 
+    val isRename = mode == NameFormMode.RenameParent || mode == NameFormMode.RenameSection
+    val isParent = mode == NameFormMode.Parent || mode == NameFormMode.RenameParent
+
+    val dialogTitle = when (mode) {
+        NameFormMode.Parent -> "New parent"
+        NameFormMode.Section -> "New section"
+        NameFormMode.RenameParent -> "Rename parent"
+        NameFormMode.RenameSection -> "Rename section"
+    }
+
+    val placeholder = if (isParent) "Parent name" else "Section name"
+    val buttonText = if (isRename) "Save" else if (isParent) "Add parent" else "Add section"
+
     PopupShell(onDismiss = onDismiss) {
         Text(
-            text = if (mode == NameFormMode.Parent) "New parent" else "New section",
+            text = dialogTitle,
             style = TextStyle(
                 fontFamily = GeneralSans,
                 fontWeight = FontWeight.W500,
@@ -65,7 +78,7 @@ fun NameForm(
                 .focusRequester(focusRequester),
             placeholder = {
                 Text(
-                    text = if (mode == NameFormMode.Parent) "Parent name" else "Section name",
+                    text = placeholder,
                     color = Ink400,
                 )
             },
@@ -93,7 +106,7 @@ fun NameForm(
         )
         Spacer(modifier = Modifier.height(20.dp))
         TaskButton(
-            text = if (mode == NameFormMode.Parent) "Add parent" else "Add section",
+            text = buttonText,
             onClick = {
                 if (title.isNotBlank()) {
                     onConfirm(title.trim())

@@ -12,4 +12,5 @@ data class Section(
     val createdAt: Long = System.currentTimeMillis(),
     val colorKey: String = "default",
     val iconKey: String? = null,
+    val scheduledDate: String? = null, // ISO date (yyyy-MM-dd), null = today/always visible
 )

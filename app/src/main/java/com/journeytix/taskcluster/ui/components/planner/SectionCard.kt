@@ -123,11 +123,9 @@ fun SectionCard(
                     indication = null,
                     onClick = { onToggle(!expanded) },
                     onLongClick = {
-                        if (!pinned) {
-                            onMenu?.invoke(
-                                IntOffset(headerCenter.x.toInt(), headerCenter.y.toInt())
-                            )
-                        }
+                        onMenu?.invoke(
+                            IntOffset(headerCenter.x.toInt(), headerCenter.y.toInt())
+                        )
                     },
                 )
                 .padding(vertical = 8.dp),

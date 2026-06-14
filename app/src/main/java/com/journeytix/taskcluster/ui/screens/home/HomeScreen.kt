@@ -100,6 +100,9 @@ fun HomeScreen(
     var showAddChooser by remember { mutableStateOf(false) }
     var showNameForm by remember { mutableStateOf<NameFormMode?>(null) }
     var nameFormParentId by remember { mutableStateOf<Long?>(null) }
+    var renameParentId by remember { mutableStateOf<Long?>(null) }
+    var renameSectionId by remember { mutableStateOf<Long?>(null) }
+    var renameInitialTitle by remember { mutableStateOf("") }
     var addTaskSectionId by remember { mutableStateOf<Long?>(null) }
     var showImportPicker by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
@@ -225,7 +228,12 @@ fun HomeScreen(
                         count = state.daily.size.toString(),
                         modifier = Modifier.testTag("daily-parent"),
                     ) {
-                        state.daily.forEach { SectionBlock(it, viewModel, now, onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor }) }
+                        state.daily.forEach { SectionBlock(
+                            it, viewModel, now,
+                            onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
+                            onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                            onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
+                        ) }
                     }
                     val favourites = state.parents.filter { it.parent.isFavourite }
                     favourites.forEach { ParentBlock(
@@ -265,7 +273,12 @@ fun HomeScreen(
                         onIconClick = { sId, anchor -> iconTarget = sId to anchor },
                         onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
                     ) }
-                    state.standalone.forEach { SectionBlock(it, viewModel, now) }
+                    state.standalone.forEach { SectionBlock(
+                        it, viewModel, now,
+                        onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
+                        onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                        onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
+                    ) }
                 }
             }
         }
@@ -307,7 +320,11 @@ fun HomeScreen(
                         nameFormParentId = p.id
                         showNameForm = NameFormMode.Section
                     }),
-                    ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = { /* rename — TODO */ }),
+                    ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = {
+                        renameParentId = p.id
+                        renameInitialTitle = p.title
+                        showNameForm = NameFormMode.RenameParent
+                    }),
                     ContextMenuItem(label = "Emoji", icon = TaskIcons.Smile, onClick = {
                         emojiTarget = p.id to (parentMenuAnchor ?: IntOffset.Zero)
                     }),
@@ -329,18 +346,29 @@ fun HomeScreen(
             anchor = sectionMenuAnchor ?: IntOffset.Zero,
             onClose = { sectionMenuAnchor = null },
             items = menuSectionId?.let { sId ->
-                listOf(
-                    ContextMenuItem(label = "Add task", icon = TaskIcons.Plus, onClick = {
+                val isDaily = state.daily.any { it.section.id == sId }
+                val sectionTitle = state.daily.find { it.section.id == sId }?.section?.title
+                    ?: state.parents.flatMap { it.sections }.find { it.section.id == sId }?.section?.title
+                    ?: state.standalone.find { it.section.id == sId }?.section?.title
+                    ?: ""
+                buildList {
+                    add(ContextMenuItem(label = "Add task", icon = TaskIcons.Plus, onClick = {
                         addTaskSectionId = sId
-                    }),
-                    ContextMenuItem(label = "Icon", icon = TaskIcons.Image, onClick = {
+                    }))
+                    add(ContextMenuItem(label = "Icon", icon = TaskIcons.Image, onClick = {
                         iconTarget = sId to (sectionMenuAnchor ?: IntOffset.Zero)
-                    }),
-                    ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = { /* rename — TODO */ }),
-                    ContextMenuItem(label = "Delete", icon = TaskIcons.Trash, danger = true, onClick = {
-                        viewModel.onIntent(HomeIntent.DeleteSection(sId))
-                    }),
-                )
+                    }))
+                    add(ContextMenuItem(label = "Rename", icon = TaskIcons.Pencil, onClick = {
+                        renameSectionId = sId
+                        renameInitialTitle = sectionTitle
+                        showNameForm = NameFormMode.RenameSection
+                    }))
+                    if (!isDaily) {
+                        add(ContextMenuItem(label = "Delete", icon = TaskIcons.Trash, danger = true, onClick = {
+                            viewModel.onIntent(HomeIntent.DeleteSection(sId))
+                        }))
+                    }
+                }
             } ?: emptyList(),
         )
 
@@ -385,17 +413,36 @@ fun HomeScreen(
         showNameForm?.let { mode ->
             NameForm(
                 mode = mode,
+                initialTitle = renameInitialTitle,
                 onConfirm = { title ->
                     when (mode) {
-                        NameFormMode.Parent -> viewModel.onIntent(HomeIntent.CreateParent(title, null))
-                        NameFormMode.Section -> viewModel.onIntent(HomeIntent.CreateSection(title, nameFormParentId, null))
+                        NameFormMode.Parent -> {
+                            val scheduledDate = if (state.selected.isAfter(state.today)) state.selected.toString() else null
+                            viewModel.onIntent(HomeIntent.CreateParent(title, null, scheduledDate))
+                        }
+                        NameFormMode.Section -> {
+                            val scheduledDate = if (state.selected.isAfter(state.today)) state.selected.toString() else null
+                            viewModel.onIntent(HomeIntent.CreateSection(title, nameFormParentId, null, scheduledDate))
+                        }
+                        NameFormMode.RenameParent -> {
+                            renameParentId?.let { viewModel.onIntent(HomeIntent.RenameParent(it, title)) }
+                        }
+                        NameFormMode.RenameSection -> {
+                            renameSectionId?.let { viewModel.onIntent(HomeIntent.RenameSection(it, title)) }
+                        }
                     }
                     showNameForm = null
                     nameFormParentId = null
+                    renameParentId = null
+                    renameSectionId = null
+                    renameInitialTitle = ""
                 },
                 onDismiss = {
                     showNameForm = null
                     nameFormParentId = null
+                    renameParentId = null
+                    renameSectionId = null
+                    renameInitialTitle = ""
                 },
             )
         }
@@ -524,7 +571,7 @@ private fun SectionBlock(
         done = sectionWithTasks.done,
         total = sectionWithTasks.total,
         pinned = section.isDaily,
-        onMenu = if (!section.isDaily && onSectionMenu != null) { { anchor -> onSectionMenu(section.id, anchor) } } else null,
+        onMenu = if (onSectionMenu != null) { { anchor -> onSectionMenu(section.id, anchor) } } else null,
         onIconClick = if (onIconClick != null) { { anchor -> onIconClick(section.id, anchor) } } else null,
     ) {
         if (sectionWithTasks.tasks.isEmpty()) {
