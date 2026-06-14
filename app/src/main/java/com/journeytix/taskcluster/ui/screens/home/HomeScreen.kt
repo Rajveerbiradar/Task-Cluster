@@ -152,7 +152,14 @@ fun HomeScreen(
     val state by viewModel.state.collectAsState()
     var menuAnchor by remember { mutableStateOf<IntOffset?>(null) }
     var menuButtonOrigin by remember { mutableStateOf(Offset.Zero) }
-    val now = remember { System.currentTimeMillis() }
+    // Tick every minute so time pills / overdue states stay live while the app is open.
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000)
+            now = System.currentTimeMillis()
+        }
+    }
     var parentMenuAnchor by remember { mutableStateOf<IntOffset?>(null) }
     var menuParent by remember { mutableStateOf<Parent?>(null) }
     var sectionMenuAnchor by remember { mutableStateOf<IntOffset?>(null) }

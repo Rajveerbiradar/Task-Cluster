@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.journeytix.taskcluster.data.db.AppDatabase
+import com.journeytix.taskcluster.data.preferences.UserPreferences
 import com.journeytix.taskcluster.data.repository.TaskRepository
 import java.time.LocalDate
 import org.junit.After
@@ -39,6 +40,7 @@ class HomeScreenTest {
             .build()
         viewModel = HomeViewModel(
             TaskRepository(db.taskDao(), db.sectionDao(), db.parentDao()),
+            UserPreferences(context),
             today,
         )
     }
@@ -84,7 +86,7 @@ class HomeScreenTest {
         viewModel.onIntent(HomeIntent.SelectDate(today.plusDays(1)))
         composeRule.waitForIdle()
         composeRule.onNodeWithText("planning — hidden until then").assertIsDisplayed()
-        composeRule.onNodeWithText("Nothing planned for this day yet.").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing planned for this day yet. Use add to plan ahead.").assertIsDisplayed()
     }
 
     @Test

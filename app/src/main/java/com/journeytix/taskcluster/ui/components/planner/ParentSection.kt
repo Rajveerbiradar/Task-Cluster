@@ -134,9 +134,15 @@ fun ParentSection(
                         },
                 ) {
                     if (ParentImage.isImage(emoji)) {
-                        val bitmap = remember(emoji) {
-                            BitmapFactory.decodeFile(ParentImage.pathOf(emoji))?.asImageBitmap()
+                        val bitmapState = androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+                            initialValue = null,
+                            key1 = emoji,
+                        ) {
+                            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                BitmapFactory.decodeFile(ParentImage.pathOf(emoji))?.asImageBitmap()
+                            }
                         }
+                        val bitmap = bitmapState.value
                         if (bitmap != null) {
                             Image(
                                 bitmap = bitmap,

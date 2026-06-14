@@ -15,8 +15,8 @@ import org.koin.dsl.module
 
 val appModule = module {
     single {
+        // No destructive fallback — a missed migration must fail loudly, never wipe data.
         Room.databaseBuilder(androidContext(), AppDatabase::class.java, "taskcluster.db")
-            .fallbackToDestructiveMigration()
             .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {

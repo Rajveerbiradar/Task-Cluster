@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.journeytix.taskcluster.data.db.AppDatabase
 import com.journeytix.taskcluster.data.model.Section
 import com.journeytix.taskcluster.data.model.Task
+import com.journeytix.taskcluster.data.preferences.UserPreferences
 import com.journeytix.taskcluster.data.repository.TaskRepository
 import com.journeytix.taskcluster.ui.components.planner.TimePillStatus
 import java.time.LocalDate
@@ -35,6 +36,7 @@ class HomeViewModelTest {
 
     private lateinit var db: AppDatabase
     private lateinit var repository: TaskRepository
+    private lateinit var userPreferences: UserPreferences
     private val today = LocalDate.of(2026, 6, 13)
 
     @Before
@@ -45,6 +47,7 @@ class HomeViewModelTest {
             .allowMainThreadQueries()
             .build()
         repository = TaskRepository(db.taskDao(), db.sectionDao(), db.parentDao())
+        userPreferences = UserPreferences(context)
     }
 
     @After
@@ -66,7 +69,7 @@ class HomeViewModelTest {
         repository.addTask(Task(sectionId = sectionId, title = "second", createdAt = 2_000))
         repository.addTask(Task(sectionId = sectionId, title = "third", createdAt = 3_000))
 
-        val viewModel = HomeViewModel(repository, today)
+        val viewModel = HomeViewModel(repository, userPreferences, today)
         var state = awaitState(viewModel) { it.standalone.isNotEmpty() }
         val tasks = state.standalone.first().tasks
         // Newest on top
@@ -88,7 +91,7 @@ class HomeViewModelTest {
         val sectionId = repository.addSection(Section(title = "errands"))
         repository.addTask(Task(sectionId = sectionId, title = "task", createdAt = 1_000))
 
-        val viewModel = HomeViewModel(repository, today)
+        val viewModel = HomeViewModel(repository, userPreferences, today)
         var state = awaitState(viewModel) { it.standalone.isNotEmpty() }
 
         viewModel.onIntent(HomeIntent.SelectDate(today.minusDays(1)))
@@ -106,7 +109,7 @@ class HomeViewModelTest {
 
     @Test
     fun `future dates are planning mode`() = runTest {
-        val viewModel = HomeViewModel(repository, today)
+        val viewModel = HomeViewModel(repository, userPreferences, today)
         viewModel.onIntent(HomeIntent.SelectDate(today.plusDays(2)))
         val state = awaitState(viewModel) { it.isPlanning }
         assertTrue(state.isPlanning)
@@ -118,7 +121,7 @@ class HomeViewModelTest {
         repository.addSection(Section(title = "morning", isDaily = true))
         repository.addSection(Section(title = "side project"))
 
-        val viewModel = HomeViewModel(repository, today)
+        val viewModel = HomeViewModel(repository, userPreferences, today)
         val state = awaitState(viewModel) { it.daily.isNotEmpty() && it.standalone.isNotEmpty() }
         assertEquals("morning", state.daily.first().section.title)
         assertEquals("side project", state.standalone.first().section.title)
@@ -131,7 +134,7 @@ class HomeViewModelTest {
         fun taskDue(now: Long) =
             timePillFor(Task(sectionId = 1, title = "t", createdAt = created, dueDate = due), now)
 
-        assertEquals(TimePillStatus.Calm, taskDue(10_000).first) // 90% left
+        assertEquals(TimePillStatus.OnTrack, taskDue(10_000).first) // 90% left — now always shown
         assertEquals(TimePillStatus.OnTrack, taskDue(60_000).first) // 40% left
         assertEquals(TimePillStatus.Close, taskDue(80_000).first) // 20% left
         assertEquals(TimePillStatus.Due, taskDue(95_000).first) // 5% left

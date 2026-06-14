@@ -61,6 +61,7 @@ class TaskRepository(
         parentDao.restoreById(id)
     }
     suspend fun deleteParentPermanently(id: Long) {
+        parentDao.getById(id)?.let { com.journeytix.taskcluster.data.image.ParentImage.deleteIfImage(it.emoji) }
         val sections = sectionDao.getByParentId(id)
         sections.forEach { taskDao.deleteBySectionId(it.id) }
         sectionDao.deleteByParentId(id)
