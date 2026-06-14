@@ -248,7 +248,29 @@ class HomeViewModel(
                             else -> insertImportedParent(p, uniqueTitle(title, usedTitles), usedTitles)
                         }
                     }
-                intent.data.standaloneSections.forEach { insertImportedSection(it, null) }
+                // Standalone sections — dedupe against existing standalone sections.
+                val existingStandalone = state.value.standalone.map { it.section }
+                val usedSectionTitles = existingStandalone.map { it.title }.toMutableList()
+                intent.data.standaloneSections.forEach { s ->
+                    val title = s.title.trim().take(80)
+                    val dup = existingStandalone.firstOrNull { it.title.equals(title, ignoreCase = true) }
+                    when {
+                        dup == null -> {
+                            usedSectionTitles.add(title)
+                            insertImportedSection(s, null)
+                        }
+                        intent.strategy == ImportStrategy.Skip -> Unit
+                        intent.strategy == ImportStrategy.Replace -> {
+                            repository.deleteSectionPermanently(dup.id)
+                            insertImportedSection(s, null)
+                        }
+                        else -> {
+                            val unique = uniqueTitle(title, usedSectionTitles)
+                            usedSectionTitles.add(unique)
+                            insertImportedSection(s.copy(title = unique), null)
+                        }
+                    }
+                }
             }
             is HomeIntent.ImportSectionsInto -> viewModelScope.launch {
                 val incoming = intent.data.standaloneSections +

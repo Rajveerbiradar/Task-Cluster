@@ -655,10 +655,13 @@ fun HomeScreen(
                                 }
                             }
                             null -> {
-                                val dupes = data.parents
+                                val parentDupes = data.parents
                                     .map { it.title.trim() }
                                     .filter { t -> state.parents.any { it.parent.title.equals(t, ignoreCase = true) } }
-                                    .distinct()
+                                val sectionDupes = data.standaloneSections
+                                    .map { it.title.trim() }
+                                    .filter { t -> state.standalone.any { it.section.title.equals(t, ignoreCase = true) } }
+                                val dupes = (parentDupes + sectionDupes).distinct()
                                 if (dupes.isEmpty()) {
                                     viewModel.onIntent(HomeIntent.Import(data))
                                     Toast.makeText(context, "Imported", Toast.LENGTH_SHORT).show()
@@ -680,7 +683,7 @@ fun HomeScreen(
 
         // Duplicate resolution for an import (parents for global, sections when scoped).
         pendingImport?.let { pending ->
-            val noun = if (pending.scope is ImportScope.IntoParent) "sections" else "parents"
+            val noun = if (pending.scope is ImportScope.IntoParent) "sections" else "items"
             ImportConflictDialog(
                 duplicateTitles = pending.dupes,
                 noun = noun,
