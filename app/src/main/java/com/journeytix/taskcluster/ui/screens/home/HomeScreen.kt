@@ -228,20 +228,6 @@ fun HomeScreen(
             }
 
             when {
-                state.isPlanning -> Text(
-                    text = "Nothing planned for this day yet.",
-                    style = TextStyle(
-                        fontFamily = GeneralSans,
-                        fontWeight = FontWeight.W400,
-                        fontSize = 15.sp,
-                        lineHeight = 22.sp,
-                        textAlign = TextAlign.Center,
-                    ),
-                    color = Ink400,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 40.dp),
-                )
                 state.page == HomePage.Home -> Column(
                     modifier = Modifier.padding(top = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(Space3),
@@ -268,8 +254,11 @@ fun HomeScreen(
                             onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
                         ) }
                     }
+                    // On a future date, show everything scheduled for that day (not just
+                    // favourites) so items added while planning are visible.
                     val favourites = state.parents.filter { it.parent.isFavourite }
-                    favourites.forEach { ParentBlock(
+                    val parentsToShow = if (state.isPlanning) state.parents else favourites
+                    parentsToShow.forEach { ParentBlock(
                         it.parent, it.sections, viewModel, now,
                         onMenu = { p, anchor -> menuParent = p; parentMenuAnchor = anchor },
                         onEmojiClick = { pId, anchor -> emojiTarget = pId to anchor },
@@ -277,9 +266,23 @@ fun HomeScreen(
                         onIconClick = { sId, anchor -> iconTarget = sId to anchor },
                         onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
                     ) }
-                    if (favourites.isEmpty()) {
+                    if (state.isPlanning) {
+                        state.standalone.forEach { SectionBlock(
+                            it, viewModel, now,
+                            onSectionMenu = { sId, anchor -> menuSectionId = sId; sectionMenuAnchor = anchor },
+                            onIconClick = { sId, anchor -> iconTarget = sId to anchor },
+                            onTaskMenu = { tId, anchor -> menuTaskId = tId; taskMenuAnchor = anchor },
+                        ) }
+                    }
+                    val planningEmpty = state.isPlanning &&
+                        parentsToShow.isEmpty() && state.standalone.isEmpty()
+                    if (planningEmpty || (!state.isPlanning && favourites.isEmpty())) {
                         Text(
-                            text = "Pin parents from the Tasks tab to see them here.",
+                            text = if (state.isPlanning) {
+                                "Nothing planned for this day yet. Use add to plan ahead."
+                            } else {
+                                "Pin parents from the Tasks tab to see them here."
+                            },
                             style = TextStyle(
                                 fontFamily = GeneralSans,
                                 fontWeight = FontWeight.W400,
