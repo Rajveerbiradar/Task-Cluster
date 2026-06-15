@@ -1,0 +1,45 @@
+# Baseline profile — hot/startup paths for the Home planner and Tasks list.
+# Applied at install time by androidx.profileinstaller (AGP bundles this file
+# automatically). Wildcard rules format: <flags>L<class>-><method>.
+#   H = hot, S = startup, P = post-startup, L = class descriptor.
+#
+# NOTE: hand-authored because the androidx.baselineprofile generator plugin does
+# not yet support AGP 9.2. Regenerate precisely via :app:generateBaselineProfile
+# once a compatible plugin version is available (see :baselineprofile module).
+
+# --- App code (all of it is small and on the startup/scroll path) ---
+HSPLcom/journeytix/taskcluster/**->**(**)**
+SPLcom/journeytix/taskcluster/**->**(**)**
+Lcom/journeytix/taskcluster/**
+
+# --- Compose runtime / snapshot system (first composition + recomposition) ---
+HSPLandroidx/compose/runtime/**->**(**)**
+Landroidx/compose/runtime/**
+
+# --- Compose UI core (layout, draw, modifiers, graphics) ---
+HSPLandroidx/compose/ui/**->**(**)**
+Landroidx/compose/ui/**
+
+# --- Foundation (Column/Row/Box, scroll, clickable, text) ---
+HSPLandroidx/compose/foundation/**->**(**)**
+Landroidx/compose/foundation/**
+
+# --- Foundation lazy lists (LazyColumn used by search/results) ---
+HSPLandroidx/compose/foundation/lazy/**->**(**)**
+Landroidx/compose/foundation/lazy/**
+
+# --- Material3 (Text, surfaces used across the planner) ---
+HSPLandroidx/compose/material3/**->**(**)**
+Landroidx/compose/material3/**
+
+# --- Animation (spring expand/collapse, fades) ---
+HSPLandroidx/compose/animation/**->**(**)**
+Landroidx/compose/animation/**
+
+# --- Navigation Compose (NavHost + screen transitions) ---
+HSPLandroidx/navigation/**->**(**)**
+Landroidx/navigation/**
+
+# --- Lifecycle / ViewModel + coroutines (state flows feeding the UI) ---
+HSPLandroidx/lifecycle/**->**(**)**
+HSPLkotlinx/coroutines/**->**(**)**

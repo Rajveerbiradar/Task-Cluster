@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
     implementation(libs.composables.icons.lucide)
+    implementation(libs.androidx.profileinstaller) // applies app/src/main/baseline-prof.txt at install
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
