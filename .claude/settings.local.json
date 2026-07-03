@@ -42,7 +42,9 @@
       "PowerShell(adb devices *)",
       "PowerShell(cd \"C:\\\\Users\\\\rajveer\\\\AndroidStudioProjects\\\\TaskCluster2\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" install -r \"app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\")",
       "PowerShell(& \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell am start -n com.journeytix.taskcluster/.MainActivity)",
-      "PowerShell(cd \"C:\\\\Users\\\\rajveer\\\\AndroidStudioProjects\\\\TaskCluster2\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" install -r \"app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell am start -n com.journeytix.taskcluster/.MainActivity)"
+      "PowerShell(cd \"C:\\\\Users\\\\rajveer\\\\AndroidStudioProjects\\\\TaskCluster2\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" install -r \"app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell am start -n com.journeytix.taskcluster/.MainActivity)",
+      "PowerShell(& \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" install -r \"C:\\\\Users\\\\rajveer\\\\AndroidStudioProjects\\\\TaskCluster2\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\"; & \"$env:LOCALAPPDATA\\\\Android\\\\Sdk\\\\platform-tools\\\\adb.exe\" shell am start -n com.journeytix.taskcluster/.MainActivity)",
+      "Bash(python convert_svgs.py)"
     ]
   }
 }

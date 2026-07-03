@@ -24,8 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Task Cluster"
 include(":app")
-// :baselineprofile (macrobenchmark generator) is kept on disk but not built —
-// the androidx.baselineprofile plugin doesn't support AGP 9.2 yet. Re-add this
-// include once a compatible plugin version ships, then run :app:generateBaselineProfile.
-// include(":baselineprofile")
  
